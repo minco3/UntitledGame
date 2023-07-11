@@ -1,0 +1,22 @@
+cmake_minimum_required(VERSION 3.7)
+
+project(SDL2Test)
+
+set(WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+
+set(CMAKE_CXX_STANDARD 20)
+
+find_package(SDL2 REQUIRED)
+find_package(SDL2_image REQUIRED)
+find_package(Vulkan REQUIRED)
+
+include_directories(/opt/homebrew/include)
+include_directories(/usr/local/include)
+include_directories(~VulkanSDK)
+
+message(STATUS ${Vulkan_LIBRARIES})
+
+add_executable(SDL2Test main.cpp)
+target_link_libraries(SDL2Test SDL2::SDL2)
+target_link_libraries(SDL2Test SDL2_image::SDL2_image)
+target_link_libraries(SDL2Test Vulkan::Vulkan)
