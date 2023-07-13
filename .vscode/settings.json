@@ -3,6 +3,8 @@
         "iostream": "cpp",
         "__locale": "cpp",
         "vector": "cpp",
-        "format": "cpp"
+        "format": "cpp",
+        "filesystem": "cpp",
+        "ostream": "cpp"
     }
 }

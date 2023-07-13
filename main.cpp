@@ -44,9 +44,7 @@ int main()
         VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
         VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME};
 
-    std::vector<const char*> instanceLayers = {
-        "VK_LAYER_KHRONOS_validation"
-    };
+    std::vector<const char*> instanceLayers = {"VK_LAYER_KHRONOS_validation"};
 
     unsigned int numExtentions;
     if (SDL_Vulkan_GetInstanceExtensions(window, &numExtentions, nullptr) !=
@@ -203,11 +201,21 @@ int main()
     for (uint32_t i = 0; i < queueFamilyPropertyCount; i++)
     {
         const VkQueueFamilyProperties& properties = queueFamilyProperties.at(i);
+
+        VkBool32 supported;
+        result = vkGetPhysicalDeviceSurfaceSupportKHR(
+            physicalDevice, i, surface, &supported);
+        if (result != VK_SUCCESS)
+        {
+            LogError("failed to get physical device support", result);
+            return 1;
+        }
+
         std::cout << std::setw(4) << ""
                   << "Queue Family [" << i
                   << "]: " << std::bitset<32>(properties.queueFlags) << " "
-                  << properties.queueCount << " "
-                  << properties.timestampValidBits << std::endl;
+                  << properties.queueCount << " " << std::boolalpha << supported
+                  << " " << properties.timestampValidBits << std::endl;
 
         VkDeviceQueueCreateInfo deviceQueueCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -249,12 +257,50 @@ int main()
 
     for (const auto& extension : deviceSupportedExtensions)
     {
-        //https://vulkan.lunarg.com/doc/view/1.3.250.1/mac/1.3-extensions/vkspec.html#VUID-VkDeviceCreateInfo-pProperties-04451
-        if (!strcmp(extension.extensionName, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME))
+        // https://vulkan.lunarg.com/doc/view/1.3.250.1/mac/1.3-extensions/vkspec.html#VUID-VkDeviceCreateInfo-pProperties-04451
+        if (!strcmp(
+                extension.extensionName,
+                VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME))
         {
-            deviceExtensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+            deviceExtensions.push_back(
+                VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
         }
     }
+
+    uint32_t surfaceFormatCount = 0;
+    result = vkGetPhysicalDeviceSurfaceFormatsKHR(
+        physicalDevice, surface, &surfaceFormatCount, nullptr);
+    if (result != VK_SUCCESS)
+    {
+        LogError("Failed to get physical device format count", result);
+    }
+    std::vector<VkSurfaceFormatKHR> surfaceFormats(
+        static_cast<size_t>(surfaceFormatCount));
+    result = vkGetPhysicalDeviceSurfaceFormatsKHR(
+        physicalDevice, surface, &surfaceFormatCount, surfaceFormats.data());
+    if (result != VK_SUCCESS)
+    {
+        LogError("Failed to get physical device formats", result);
+    }
+
+#ifdef DEBUG
+    std::cout << "Supported Formats:" << std::endl;
+    for (const auto& surfaceFormat : surfaceFormats)
+    {
+        std::cout << std::setw(4) << " "
+                  << string_VkColorSpaceKHR(surfaceFormat.colorSpace) << " "
+                  << string_VkFormat(surfaceFormat.format) << std::endl;
+    }
+#endif
+
+    VkSurfaceCapabilitiesKHR surfaceCapabilities;
+    result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+        physicalDevice, surface, &surfaceCapabilities);
+
+    std::cout << "Surface capabiltiies:" << std::endl;
+    std::cout << std::setw(4) << " "
+              << "Current Extent: " << surfaceCapabilities.currentExtent.width
+              << "x" << surfaceCapabilities.currentExtent.height << std::endl;
 
     VkDevice device = {};
     VkDeviceCreateInfo deviceCreateInfo = {
