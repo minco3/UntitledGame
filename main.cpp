@@ -15,8 +15,12 @@
 
 void LogError(const std::string& message, VkResult result)
 {
-    const std::string resultString = string_VkResult(result);
-    std::cerr << "ERROR: " << message << ": " << resultString << std::endl;
+    if (result != VK_SUCCESS)
+    {
+        const std::string resultString = string_VkResult(result);
+        std::cerr << "ERROR: " << message << ": " << resultString << std::endl;
+        exit(1);
+    }
 }
 
 int main()
@@ -66,21 +70,15 @@ int main()
     uint32_t instanceSupportedExtensionCount;
     result = vkEnumerateInstanceExtensionProperties(
         nullptr, &instanceSupportedExtensionCount, nullptr);
-    if (result != VK_SUCCESS || instanceSupportedExtensionCount == 0)
-    {
-        LogError("Failed to get instance supported extension count", result);
-        return 1;
-    }
+    LogError("Failed to get instance supported extension count", result);
+
     std::vector<VkExtensionProperties> instanceSupportedExtensions(
         instanceSupportedExtensionCount);
     result = vkEnumerateInstanceExtensionProperties(
         nullptr, &instanceSupportedExtensionCount,
         instanceSupportedExtensions.data());
-    if (result != VK_SUCCESS)
-    {
-        LogError("Failed to get instance supported extension count", result);
-        return 1;
-    }
+    LogError("Failed to get instance supported extension count", result);
+
 #ifdef DEBUG
     std::cout << "Instance Supported Extensions:" << std::endl;
     for (const VkExtensionProperties& properties : instanceSupportedExtensions)
@@ -132,48 +130,34 @@ int main()
     if (SDL_Vulkan_CreateSurface(window, instance, &surface) != SDL_TRUE)
     {
         std::cerr << "ERROR: error creating surface" << std::endl;
-        return 1;
+        exit(1);
     }
 
-    if (result != VK_SUCCESS)
-    {
-        LogError("error creating vulkan instance", result);
-        return 1;
-    }
+    LogError("error creating vulkan instance", result);
 
     uint32_t deviceCount = 0;
     result = vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
     if (deviceCount == 0)
     {
         std::cerr << "ERROR: no vukan devices found!" << std::endl;
-        return 1;
+        exit(1);
     }
-    if (result != VK_SUCCESS)
-    {
-        LogError("error fetching physical device count", result);
-        return 1;
-    }
+    LogError("error fetching physical device count", result);
 
     std::vector<VkPhysicalDevice> physicalDevices(
         static_cast<size_t>(deviceCount));
     result = vkEnumeratePhysicalDevices(
         instance, &deviceCount, &physicalDevices.front());
-    if (result != VK_SUCCESS)
+    LogError("error enumerating physical devices", result);
+    
+    std::cout << "Physical Devices:" << std::endl;
+    for (uint32_t i = 0; i < deviceCount; i++)
     {
-        LogError("error enumerating physical devices", result);
-        return 1;
-    }
-    else
-    {
-        std::cout << "Physical Devices:" << std::endl;
-        for (uint32_t i = 0; i < deviceCount; i++)
-        {
-            VkPhysicalDeviceProperties properties;
-            vkGetPhysicalDeviceProperties(physicalDevices.at(i), &properties);
-            std::cout << std::setw(4) << ""
-                      << "Physical device [" << i
-                      << "]: " << properties.deviceName << std::endl;
-        }
+        VkPhysicalDeviceProperties properties;
+        vkGetPhysicalDeviceProperties(physicalDevices.at(i), &properties);
+        std::cout << std::setw(4) << ""
+                    << "Physical device [" << i
+                    << "]: " << properties.deviceName << std::endl;
     }
 
     VkPhysicalDevice physicalDevice = physicalDevices[0];
@@ -184,7 +168,7 @@ int main()
     if (queueFamilyPropertyCount == 0)
     {
         std::cerr << "ERROR: no physical device queues found" << std::endl;
-        return 1;
+        exit(1);
     }
     std::vector<VkQueueFamilyProperties> queueFamilyProperties(
         queueFamilyPropertyCount);
@@ -205,11 +189,7 @@ int main()
         VkBool32 supported;
         result = vkGetPhysicalDeviceSurfaceSupportKHR(
             physicalDevice, i, surface, &supported);
-        if (result != VK_SUCCESS)
-        {
-            LogError("failed to get physical device support", result);
-            return 1;
-        }
+        LogError("failed to get physical device support", result);
 
         std::cout << std::setw(4) << ""
                   << "Queue Family [" << i
@@ -228,21 +208,14 @@ int main()
     uint32_t deviceSupportedExtensionsCount = 0;
     result = vkEnumerateDeviceExtensionProperties(
         physicalDevice, nullptr, &deviceSupportedExtensionsCount, nullptr);
-    if (result != VK_SUCCESS)
-    {
-        LogError("error getting available device extension count", result);
-        return 1;
-    }
+    LogError("error getting available device extension count", result);
+
     std::vector<VkExtensionProperties> deviceSupportedExtensions(
         static_cast<size_t>(deviceSupportedExtensionsCount));
     result = vkEnumerateDeviceExtensionProperties(
         physicalDevice, nullptr, &deviceSupportedExtensionsCount,
         deviceSupportedExtensions.data());
-    if (result != VK_SUCCESS)
-    {
-        LogError("error getting available device extensions", result);
-        return 1;
-    }
+    LogError("error getting available device extensions", result);
 
 #ifdef DEBUG
     std::cout << "Physical Device Supported Extensions:" << std::endl;
@@ -253,7 +226,8 @@ int main()
     }
 #endif
 
-    std::vector<const char*> deviceExtensions;
+    std::vector<const char*> deviceExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
     for (const auto& extension : deviceSupportedExtensions)
     {
@@ -270,18 +244,12 @@ int main()
     uint32_t surfaceFormatCount = 0;
     result = vkGetPhysicalDeviceSurfaceFormatsKHR(
         physicalDevice, surface, &surfaceFormatCount, nullptr);
-    if (result != VK_SUCCESS)
-    {
         LogError("Failed to get physical device format count", result);
-    }
     std::vector<VkSurfaceFormatKHR> surfaceFormats(
         static_cast<size_t>(surfaceFormatCount));
     result = vkGetPhysicalDeviceSurfaceFormatsKHR(
         physicalDevice, surface, &surfaceFormatCount, surfaceFormats.data());
-    if (result != VK_SUCCESS)
-    {
         LogError("Failed to get physical device formats", result);
-    }
 
 #ifdef DEBUG
     std::cout << "Supported Formats:" << std::endl;
@@ -316,8 +284,57 @@ int main()
     if (result != VK_SUCCESS)
     {
         LogError("error creating device", result);
-        return 1;
+        exit(1);
     }
+
+    uint32_t numImages = surfaceCapabilities.minImageCount + 1;
+
+    VkSurfaceFormatKHR surfaceFormat = {.format = VK_FORMAT_UNDEFINED};
+    if (surfaceFormats.size() == 1 &&
+        surfaceFormats.at(0).format == VK_FORMAT_UNDEFINED)
+    {
+        surfaceFormat = {
+            .format = VK_FORMAT_R8G8B8A8_UNORM,
+            .colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR};
+    }
+    else
+    {
+        for (const VkSurfaceFormatKHR& format : surfaceFormats)
+        {
+            if (format.format == VK_FORMAT_B8G8R8A8_UNORM)
+            {
+                surfaceFormat = format;
+                break;
+            }
+        }
+    }
+    if (surfaceFormat.format == VK_FORMAT_UNDEFINED)
+    {
+        surfaceFormat = surfaceFormats.at(0);
+        std::cerr << "WARNING: Requested format not found! falling back to: "
+                  << string_VkFormat(surfaceFormat.format) << " "
+                  << string_VkColorSpaceKHR(surfaceFormat.colorSpace)
+                  << std::endl;
+    }
+
+    VkSwapchainCreateInfoKHR swapchainCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        .surface = surface,
+        .minImageCount = numImages,
+        .imageFormat = surfaceFormat.format,
+        .imageColorSpace = surfaceFormat.colorSpace,
+        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
+        .imageArrayLayers = 1,
+        .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .presentMode = VK_PRESENT_MODE_FIFO_KHR,
+        .clipped = true,
+        .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        .imageExtent = surfaceCapabilities.currentExtent};
+
+    VkSwapchainKHR swapchain;
+    result = vkCreateSwapchainKHR(device, &swapchainCreateInfo, nullptr, &swapchain);
+    LogError("failed to create swapchain", result);
 
     while (running)
     {
