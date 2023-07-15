@@ -7,8 +7,8 @@
 #include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_beta.h>
-#define VMA_IMPLEMENTATION
 #include <bitset>
+#define VMA_IMPLEMENTATION
 #include <vma/vk_mem_alloc.h>
 
 // #define DEBUG
@@ -36,7 +36,7 @@ int main()
     }
 
     window = SDL_CreateWindow(
-        "Marcocraft", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1200, 800,
+        "SDL2 VULKAN TEST", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1200, 800,
         SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
     if (window == nullptr)
     {
@@ -149,15 +149,15 @@ int main()
     result = vkEnumeratePhysicalDevices(
         instance, &deviceCount, &physicalDevices.front());
     LogError("error enumerating physical devices", result);
-    
+
     std::cout << "Physical Devices:" << std::endl;
     for (uint32_t i = 0; i < deviceCount; i++)
     {
         VkPhysicalDeviceProperties properties;
         vkGetPhysicalDeviceProperties(physicalDevices.at(i), &properties);
         std::cout << std::setw(4) << ""
-                    << "Physical device [" << i
-                    << "]: " << properties.deviceName << std::endl;
+                  << "Physical device [" << i << "]: " << properties.deviceName
+                  << std::endl;
     }
 
     VkPhysicalDevice physicalDevice = physicalDevices[0];
@@ -244,12 +244,12 @@ int main()
     uint32_t surfaceFormatCount = 0;
     result = vkGetPhysicalDeviceSurfaceFormatsKHR(
         physicalDevice, surface, &surfaceFormatCount, nullptr);
-        LogError("Failed to get physical device format count", result);
+    LogError("Failed to get physical device format count", result);
     std::vector<VkSurfaceFormatKHR> surfaceFormats(
         static_cast<size_t>(surfaceFormatCount));
     result = vkGetPhysicalDeviceSurfaceFormatsKHR(
         physicalDevice, surface, &surfaceFormatCount, surfaceFormats.data());
-        LogError("Failed to get physical device formats", result);
+    LogError("Failed to get physical device formats", result);
 
 #ifdef DEBUG
     std::cout << "Supported Formats:" << std::endl;
@@ -323,7 +323,8 @@ int main()
         .minImageCount = numImages,
         .imageFormat = surfaceFormat.format,
         .imageColorSpace = surfaceFormat.colorSpace,
-        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                      VK_IMAGE_USAGE_TRANSFER_DST_BIT,
         .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
         .imageArrayLayers = 1,
         .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
@@ -333,8 +334,90 @@ int main()
         .imageExtent = surfaceCapabilities.currentExtent};
 
     VkSwapchainKHR swapchain;
-    result = vkCreateSwapchainKHR(device, &swapchainCreateInfo, nullptr, &swapchain);
+    result =
+        vkCreateSwapchainKHR(device, &swapchainCreateInfo, nullptr, &swapchain);
     LogError("failed to create swapchain", result);
+
+    uint32_t swapchainImageCount = 0;
+    result = vkGetSwapchainImagesKHR(
+        device, swapchain, &swapchainImageCount, nullptr);
+    LogError("failed to get swapchain image count", result);
+    std::vector<VkImage> swapchainImages(
+        static_cast<size_t>(swapchainImageCount));
+    result = vkGetSwapchainImagesKHR(
+        device, swapchain, &swapchainImageCount, swapchainImages.data());
+    LogError("Failed to get swapchain images", result);
+
+    VkCommandPool commandPool;
+    VkCommandPoolCreateInfo commandPoolCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .queueFamilyIndex = 0};
+    result = vkCreateCommandPool(
+        device, &commandPoolCreateInfo, nullptr, &commandPool);
+    LogError("failed to create command pool", result);
+
+    std::vector<VkCommandBuffer> commandBuffers(swapchainImageCount);
+    VkCommandBufferAllocateInfo commandBuffersAllocateInfo{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = swapchainImageCount,
+        .commandPool = commandPool};
+    result = vkAllocateCommandBuffers(
+        device, &commandBuffersAllocateInfo, commandBuffers.data());
+    LogError("failed to allocate command buffers", result);
+
+    VkCommandBufferBeginInfo commandBufferBeginInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT};
+
+    VkClearColorValue clearColor = {0.0f, 0.0f, 1.0f, 0.0f};
+    VkClearValue clearValue = {.color = clearColor};
+
+    VkImageSubresourceRange imageRange = {
+        .levelCount = 1,
+        .layerCount = 1,
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT};
+
+    for (size_t i = 0; i < swapchainImageCount; i++)
+    {
+        auto& commandBuffer = commandBuffers[i];
+        auto& image = swapchainImages[i];
+        result = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
+        LogError("failed to start recording command buffer", result);
+
+        vkCmdClearColorImage(
+            commandBuffer, image, VK_IMAGE_LAYOUT_GENERAL, &clearColor, 1,
+            &imageRange);
+
+        result = vkEndCommandBuffer(commandBuffer);
+        LogError("failed to stop recording command buffer", result);
+    }
+
+    uint32_t imageIndex = 0;
+    result = vkAcquireNextImageKHR(
+        device, swapchain, std::numeric_limits<uint64_t>::max(), nullptr,
+        nullptr, &imageIndex);
+    LogError("failed to aquire next image", result);
+
+    VkQueue queue;
+    vkGetDeviceQueue(device, 0, 0, &queue);
+
+    assert(imageIndex < commandBuffers.size());
+
+    VkSubmitInfo submitInfo = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pCommandBuffers = &commandBuffers.at(imageIndex),
+        .commandBufferCount = static_cast<uint32_t>(commandBuffers.size())};
+    result = vkQueueSubmit(queue, 1, &submitInfo, nullptr);
+    LogError("failed to submit command buffer to queue", result);
+
+    VkPresentInfoKHR presentInfo = {
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .pSwapchains = &swapchain,
+        .swapchainCount = 1,
+        .pImageIndices = &imageIndex};
+    result = vkQueuePresentKHR(queue, &presentInfo);
+    LogError("failed to present queue", result);
 
     while (running)
     {
