@@ -1,13 +1,13 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_vulkan.h>
+#include <bitset>
 #include <iomanip>
 #include <iostream>
 #include <vector>
 #include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_beta.h>
-#include <bitset>
 #define VMA_IMPLEMENTATION
 #include <vma/vk_mem_alloc.h>
 
@@ -36,8 +36,8 @@ int main()
     }
 
     window = SDL_CreateWindow(
-        "SDL2 VULKAN TEST", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1200, 800,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
+        "SDL2 VULKAN TEST", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+        1200, 800, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
     if (window == nullptr)
     {
         std::cerr << "ERROR: error creating SDL window: " << SDL_GetError()
@@ -194,8 +194,9 @@ int main()
         std::cout << std::setw(4) << ""
                   << "Queue Family [" << i
                   << "]: " << std::bitset<32>(properties.queueFlags) << " "
-                  << properties.queueCount << " " << std::boolalpha << supported
-                  << " " << properties.timestampValidBits << std::endl;
+                  << properties.queueCount << " " << std::boolalpha
+                  << static_cast<bool>(supported) << " "
+                  << properties.timestampValidBits << std::endl;
 
         VkDeviceQueueCreateInfo deviceQueueCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -348,10 +349,12 @@ int main()
         device, swapchain, &swapchainImageCount, swapchainImages.data());
     LogError("Failed to get swapchain images", result);
 
+    const uint32_t queueFamilyIndex = 0;
+
     VkCommandPool commandPool;
     VkCommandPoolCreateInfo commandPoolCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .queueFamilyIndex = 0};
+        .queueFamilyIndex = queueFamilyIndex};
     result = vkCreateCommandPool(
         device, &commandPoolCreateInfo, nullptr, &commandPool);
     LogError("failed to create command pool", result);
@@ -378,25 +381,72 @@ int main()
         .layerCount = 1,
         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT};
 
+    VkImageSubresourceRange subresourceRange = {
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = 0,
+        .levelCount = 1,
+        .baseArrayLayer = 0,
+        .layerCount = 1};
+
     for (size_t i = 0; i < swapchainImageCount; i++)
     {
         auto& commandBuffer = commandBuffers[i];
         auto& image = swapchainImages[i];
+
+        VkImageMemoryBarrier presentToClearBarrier = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+            .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .srcQueueFamilyIndex = queueFamilyIndex,
+            .dstQueueFamilyIndex = queueFamilyIndex,
+            .image = image,
+            .subresourceRange = subresourceRange};
+
+        VkImageMemoryBarrier clearToPresentBarrier = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+            .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            .srcQueueFamilyIndex = queueFamilyIndex,
+            .dstQueueFamilyIndex = queueFamilyIndex,
+            .image = image,
+            .subresourceRange = subresourceRange};
+
         result = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
         LogError("failed to start recording command buffer", result);
 
+        vkCmdPipelineBarrier(
+            commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1,
+            &presentToClearBarrier);
+
         vkCmdClearColorImage(
-            commandBuffer, image, VK_IMAGE_LAYOUT_GENERAL, &clearColor, 1,
+            commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColor, 1,
             &imageRange);
+
+        vkCmdPipelineBarrier(
+            commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1,
+            &clearToPresentBarrier);
 
         result = vkEndCommandBuffer(commandBuffer);
         LogError("failed to stop recording command buffer", result);
     }
 
+    VkSemaphore semaphore{};
+    VkSemaphoreCreateInfo semaphoreCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+    result =
+        vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore);
+    LogError("failed to create semaphore", result);
+
     uint32_t imageIndex = 0;
     result = vkAcquireNextImageKHR(
-        device, swapchain, std::numeric_limits<uint64_t>::max(), nullptr,
-        nullptr, &imageIndex);
+        device, swapchain, std::numeric_limits<uint64_t>::max(), semaphore,
+        VK_NULL_HANDLE, &imageIndex);
     LogError("failed to aquire next image", result);
 
     VkQueue queue;
@@ -404,10 +454,15 @@ int main()
 
     assert(imageIndex < commandBuffers.size());
 
+    VkPipelineStageFlags waitFlags =
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submitInfo = {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .pCommandBuffers = &commandBuffers.at(imageIndex),
-        .commandBufferCount = static_cast<uint32_t>(commandBuffers.size())};
+        .commandBufferCount = static_cast<uint32_t>(commandBuffers.size()),
+        .pWaitDstStageMask = &waitFlags,
+        .pWaitSemaphores = &semaphore,
+        .waitSemaphoreCount = 1};
     result = vkQueueSubmit(queue, 1, &submitInfo, nullptr);
     LogError("failed to submit command buffer to queue", result);
 
