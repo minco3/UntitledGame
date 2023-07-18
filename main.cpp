@@ -443,36 +443,6 @@ int main()
         vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore);
     LogError("failed to create semaphore", result);
 
-    uint32_t imageIndex = 0;
-    result = vkAcquireNextImageKHR(
-        device, swapchain, std::numeric_limits<uint64_t>::max(), semaphore,
-        VK_NULL_HANDLE, &imageIndex);
-    LogError("failed to aquire next image", result);
-
-    VkQueue queue;
-    vkGetDeviceQueue(device, 0, 0, &queue);
-
-    assert(imageIndex < commandBuffers.size());
-
-    VkPipelineStageFlags waitFlags =
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    VkSubmitInfo submitInfo = {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .pCommandBuffers = &commandBuffers.at(imageIndex),
-        .commandBufferCount = static_cast<uint32_t>(commandBuffers.size()),
-        .pWaitDstStageMask = &waitFlags,
-        .pWaitSemaphores = &semaphore,
-        .waitSemaphoreCount = 1};
-    result = vkQueueSubmit(queue, 1, &submitInfo, nullptr);
-    LogError("failed to submit command buffer to queue", result);
-
-    VkPresentInfoKHR presentInfo = {
-        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-        .pSwapchains = &swapchain,
-        .swapchainCount = 1,
-        .pImageIndices = &imageIndex};
-    result = vkQueuePresentKHR(queue, &presentInfo);
-    LogError("failed to present queue", result);
 
     while (running)
     {
@@ -490,6 +460,36 @@ int main()
                 }
             }
         }
+        uint32_t imageIndex = 0;
+        result = vkAcquireNextImageKHR(
+            device, swapchain, std::numeric_limits<uint64_t>::max(), semaphore,
+            VK_NULL_HANDLE, &imageIndex);
+        LogError("failed to aquire next image", result);
+
+        VkQueue queue;
+        vkGetDeviceQueue(device, 0, 0, &queue);
+
+        assert(imageIndex < commandBuffers.size());
+
+        VkPipelineStageFlags waitFlags =
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        VkSubmitInfo submitInfo = {
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .pCommandBuffers = &commandBuffers.at(imageIndex),
+            .commandBufferCount = 1,
+            .pWaitDstStageMask = &waitFlags,
+            .pWaitSemaphores = &semaphore,
+            .waitSemaphoreCount = 1};
+        result = vkQueueSubmit(queue, 1, &submitInfo, nullptr);
+        LogError("failed to submit command buffer to queue", result);
+
+        VkPresentInfoKHR presentInfo = {
+            .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+            .pSwapchains = &swapchain,
+            .swapchainCount = 1,
+            .pImageIndices = &imageIndex};
+        result = vkQueuePresentKHR(queue, &presentInfo);
+        LogError("failed to present queue", result);
     }
     SDL_DestroyWindow(window);
     SDL_Quit();
