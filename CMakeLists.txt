@@ -20,3 +20,9 @@ add_executable(SDL2Test main.cpp)
 target_link_libraries(SDL2Test SDL2::SDL2)
 target_link_libraries(SDL2Test SDL2_image::SDL2_image)
 target_link_libraries(SDL2Test Vulkan::Vulkan)
+
+file(GLOB shader_files "${PROJECT_SOURCE_DIR}/shader/*")
+
+foreach(shader_file ${shader_files})
+    execute_process(COMMAND bash -c "${Vulkan_GLSLC_EXECUTABLE} -c ${shader_file}")
+endforeach()
