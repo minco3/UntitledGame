@@ -20,7 +20,7 @@
 #include <glm/glm.hpp>
 #include <vma/vk_mem_alloc.h>
 
-// #define DEBUG
+#define DEBUG
 
 struct Vertex
 {
@@ -59,8 +59,9 @@ int main()
     }
 
     std::vector<const char*> extNames = {
-        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
-        VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME};
+        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME};
+
+    VkInstanceCreateFlags instanceCreateFlags = {};
 
     std::vector<const char*> instanceLayers = {"VK_LAYER_KHRONOS_validation"};
 
@@ -98,9 +99,17 @@ int main()
     fmt::println(std::cout, "Instance Supported Extensions:");
     for (const VkExtensionProperties& properties : instanceSupportedExtensions)
     {
-        fmt::println(std : cout, "\t{}", properties.extensionName);
+        fmt::println(std::cout, "\t{}", properties.extensionName);
     }
 #endif
+    for (const VkExtensionProperties& supportedExtention: instanceSupportedExtensions)
+    {
+        if (!strcmp(supportedExtention.extensionName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME))
+        {
+            extNames.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+            instanceCreateFlags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+        }
+    }
     for (const char* extName : extNames)
     {
         for (uint32_t i = 0; i < instanceSupportedExtensionCount; i++)
@@ -114,11 +123,19 @@ int main()
             else if (i == instanceSupportedExtensionCount - 1)
             {
                 fmt::println(
-                    std::cerr, "ERROR: Requested extension not supported!");
+                    std::cerr, "ERROR: Required extension not supported!");
                 return 1;
             }
         }
     }
+
+#ifdef DEBUG
+    fmt::println(std::cout, "Enabled exensions:");
+    for (const char* extName : extNames)
+    {
+        fmt::println(std::cout, "\t{}", extName);
+    }
+#endif //DEBUG
 
     VkApplicationInfo applicationInfo = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -129,7 +146,7 @@ int main()
 
     VkInstanceCreateInfo instanceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
+        .flags = instanceCreateFlags,
         .pApplicationInfo = &applicationInfo,
         .enabledLayerCount = static_cast<uint32_t>(instanceLayers.size()),
         .ppEnabledLayerNames = instanceLayers.data(),
@@ -234,7 +251,7 @@ int main()
     {
         fmt::println("\t{}", properties.extensionName);
     }
-#endif
+#endif //DEBUG
 
     std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME};
@@ -671,7 +688,8 @@ int main()
     for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
     {
         if ((memoryRequirements.memoryTypeBits & (1 << i)) &&
-            (memoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
+            (memoryProperties.memoryTypes[i].propertyFlags & properties) ==
+                properties)
         {
             memoryTypeIndex = i;
             break;
