@@ -444,12 +444,12 @@ int main()
         .inputRate = VK_VERTEX_INPUT_RATE_VERTEX};
 
     std::array<VkVertexInputAttributeDescription, 2> attributeDescription = {
-        {{.binding = 0,
-          .location = 0,
+        {{.location = 0,
+          .binding = 0,
           .format = VK_FORMAT_R32G32_SFLOAT,
           .offset = offsetof(Vertex, pos)},
-         {.binding = 0,
-          .location = 1,
+         {.location = 1,
+          .binding = 0,
           .format = VK_FORMAT_R32G32B32_SFLOAT,
           .offset = offsetof(Vertex, color)}}};
 
