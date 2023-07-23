@@ -26,5 +26,5 @@ target_link_libraries(SDL2Test fmt::fmt)
 file(GLOB shader_files "${PROJECT_SOURCE_DIR}/shader/*")
 
 foreach(shader_file ${shader_files})
-    execute_process(COMMAND bash -c "${Vulkan_GLSLC_EXECUTABLE} -c ${shader_file}")
+    execute_process(COMMAND bash -c "${Vulkan_GLSLC_EXECUTABLE} -c -g ${shader_file}")
 endforeach()
