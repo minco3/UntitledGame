@@ -14,16 +14,25 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_beta.h>
 #define VMA_IMPLEMENTATION
+#include "vulkanfmt.h"
+#include <fmt/format.h>
+#include <fmt/ostream.h>
+#include <glm/glm.hpp>
 #include <vma/vk_mem_alloc.h>
 
 // #define DEBUG
+
+struct Vertex
+{
+    glm::vec2 pos;
+    glm::vec3 color;
+};
 
 void LogError(const std::string& message, VkResult result)
 {
     if (result != VK_SUCCESS)
     {
-        const std::string resultString = string_VkResult(result);
-        std::cerr << "ERROR: " << message << ": " << resultString << std::endl;
+        fmt::println(std::cerr, "ERROR: {}: {}", message, result);
         exit(1);
     }
 }
@@ -36,8 +45,8 @@ int main()
     SDL_Window* window;
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
     {
-        std::cerr << "ERROR: error initializing sdl: " << SDL_GetError()
-                  << std::endl;
+        fmt::println(
+            std::cerr, "ERROR: error initializing sdl: {}", SDL_GetError());
     }
 
     window = SDL_CreateWindow(
@@ -45,8 +54,8 @@ int main()
         1200, 800, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
     if (window == nullptr)
     {
-        std::cerr << "ERROR: error creating SDL window: " << SDL_GetError()
-                  << std::endl;
+        fmt::println(
+            std::cerr, "ERROR: error creating SDL window: ", SDL_GetError());
     }
 
     std::vector<const char*> extNames = {
@@ -59,15 +68,16 @@ int main()
     if (SDL_Vulkan_GetInstanceExtensions(window, &numExtentions, nullptr) !=
         SDL_TRUE)
     {
-        std::cerr << "ERROR: error getting SDL required vulkan exension count"
-                  << std::endl;
+        fmt::println(
+            std::cerr,
+            "ERROR: error getting SDL required vulkan exension count");
     }
     std::vector<const char*> sdlExtNames(numExtentions);
     if (SDL_Vulkan_GetInstanceExtensions(
             window, &numExtentions, sdlExtNames.data()) != SDL_TRUE)
     {
-        std::cerr << "ERROR: error getting SDL required vulkan extensions"
-                  << std::endl;
+        fmt::println(
+            std::cerr, "ERROR: error getting SDL required vulkan extensions");
     }
 
     extNames.insert(extNames.end(), sdlExtNames.begin(), sdlExtNames.end());
@@ -85,11 +95,10 @@ int main()
     LogError("Failed to get instance supported extension count", result);
 
 #ifdef DEBUG
-    std::cout << "Instance Supported Extensions:" << std::endl;
+    fmt::println(std::cout, "Instance Supported Extensions:");
     for (const VkExtensionProperties& properties : instanceSupportedExtensions)
     {
-        std::cout << std::setw(4) << " " << properties.extensionName
-                  << std::endl;
+        fmt::println(std : cout, "\t{}", properties.extensionName);
     }
 #endif
     for (const char* extName : extNames)
@@ -104,8 +113,8 @@ int main()
             }
             else if (i == instanceSupportedExtensionCount - 1)
             {
-                std::cerr << "ERROR: Requested extension not supported!"
-                          << std::endl;
+                fmt::println(
+                    std::cerr, "ERROR: Requested extension not supported!");
                 return 1;
             }
         }
@@ -134,7 +143,7 @@ int main()
     VkSurfaceKHR surface;
     if (SDL_Vulkan_CreateSurface(window, instance, &surface) != SDL_TRUE)
     {
-        std::cerr << "ERROR: error creating surface" << std::endl;
+        fmt::println(std::cerr, "ERROR: error creating surface");
         exit(1);
     }
 
@@ -144,7 +153,7 @@ int main()
     result = vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
     if (deviceCount == 0)
     {
-        std::cerr << "ERROR: no vukan devices found!" << std::endl;
+        fmt::println(std::cerr, "ERROR: no vukan devices found!");
         exit(1);
     }
     LogError("error fetching physical device count", result);
@@ -155,14 +164,13 @@ int main()
         instance, &deviceCount, &physicalDevices.front());
     LogError("error enumerating physical devices", result);
 
-    std::cout << "Physical Devices:" << std::endl;
+    fmt::println(std::cout, "Physical Devices:");
     for (uint32_t i = 0; i < deviceCount; i++)
     {
         VkPhysicalDeviceProperties properties;
         vkGetPhysicalDeviceProperties(physicalDevices.at(i), &properties);
-        std::cout << std::setw(4) << ""
-                  << "Physical device [" << i << "]: " << properties.deviceName
-                  << std::endl;
+        fmt::println(
+            std::cout, "\tPhysical device [{}]: {}", i, properties.deviceName);
     }
 
     VkPhysicalDevice physicalDevice = physicalDevices[0];
@@ -172,7 +180,7 @@ int main()
         physicalDevice, &queueFamilyPropertyCount, nullptr);
     if (queueFamilyPropertyCount == 0)
     {
-        std::cerr << "ERROR: no physical device queues found" << std::endl;
+        fmt::println(std::cerr, "ERROR: no physical device queues found");
         exit(1);
     }
     std::vector<VkQueueFamilyProperties> queueFamilyProperties(
@@ -185,7 +193,7 @@ int main()
         static_cast<size_t>(queueFamilyPropertyCount));
     const float priority = 1.0f;
 
-    std::cout << "Queues:" << std::endl;
+    fmt::println(std::cout, "Queues:");
     for (uint32_t i = 0; i < queueFamilyPropertyCount; i++)
     {
         const VkQueueFamilyProperties& properties = queueFamilyProperties.at(i);
@@ -195,12 +203,10 @@ int main()
             physicalDevice, i, surface, &supported);
         LogError("failed to get physical device support", result);
 
-        std::cout << std::setw(4) << ""
-                  << "Queue Family [" << i
-                  << "]: " << std::bitset<32>(properties.queueFlags) << " "
-                  << properties.queueCount << " " << std::boolalpha
-                  << static_cast<bool>(supported) << " "
-                  << properties.timestampValidBits << std::endl;
+        fmt::println(
+            std::cout, "\tQueue Family [{}]: {:#b} {} {}", i,
+            properties.queueFlags, properties.queueCount,
+            static_cast<bool>(supported));
 
         VkDeviceQueueCreateInfo deviceQueueCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -223,11 +229,10 @@ int main()
     LogError("error getting available device extensions", result);
 
 #ifdef DEBUG
-    std::cout << "Physical Device Supported Extensions:" << std::endl;
+    fmt::println(std::cout, "Physical Device Supported Extensions:");
     for (const auto properties : deviceSupportedExtensions)
     {
-        std::cout << std::setw(4) << " " << properties.extensionName
-                  << std::endl;
+        fmt::println("\t{}", properties.extensionName);
     }
 #endif
 
@@ -257,12 +262,12 @@ int main()
     LogError("Failed to get physical device formats", result);
 
 #ifdef DEBUG
-    std::cout << "Supported Formats:" << std::endl;
+    fmt::println(std::cout, "Supported Formats:");
     for (const auto& surfaceFormat : surfaceFormats)
     {
-        std::cout << std::setw(4) << " "
-                  << string_VkColorSpaceKHR(surfaceFormat.colorSpace) << " "
-                  << string_VkFormat(surfaceFormat.format) << std::endl;
+        fmt::println(
+            std::cout, "\t{}, {}", surfaceFormat.colorSpace,
+            surfaceFormat.format);
     }
 #endif
 
@@ -270,10 +275,9 @@ int main()
     result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
         physicalDevice, surface, &surfaceCapabilities);
 
-    std::cout << "Surface capabiltiies:" << std::endl;
-    std::cout << std::setw(4) << " "
-              << "Current Extent: " << surfaceCapabilities.currentExtent.width
-              << "x" << surfaceCapabilities.currentExtent.height << std::endl;
+    fmt::println(
+        std::cout, "Surface capabiltiies:\n\t{}",
+        surfaceCapabilities.currentExtent);
 
     VkDevice device = {};
     VkDeviceCreateInfo deviceCreateInfo = {
@@ -316,10 +320,10 @@ int main()
     if (surfaceFormat.format == VK_FORMAT_UNDEFINED)
     {
         surfaceFormat = surfaceFormats.at(0);
-        std::cerr << "WARNING: Requested format not found! falling back to: "
-                  << string_VkFormat(surfaceFormat.format) << " "
-                  << string_VkColorSpaceKHR(surfaceFormat.colorSpace)
-                  << std::endl;
+        fmt::println(
+            std::cerr,
+            "WARNING: Requested format not found! falling back to: {} {}",
+            surfaceFormat.format, surfaceFormat.colorSpace);
     }
 
     VkSwapchainCreateInfoKHR swapchainCreateInfo = {
@@ -379,13 +383,10 @@ int main()
         LogError("failed to create swapchain image view", result);
     }
 
-    std::cout << std::filesystem::current_path().string() << std::endl;
-
     std::ifstream vertShaderFile("shader.vert.spv", std::ios::binary);
     if (!vertShaderFile.is_open())
     {
-        std::cerr << "ERROR: failed to open the vertex shader file"
-                  << std::endl;
+        fmt::println(std::cerr, "ERROR: failed to open the vertex shader file");
         exit(1);
     }
     std::string vertCode(
@@ -395,8 +396,8 @@ int main()
     std::ifstream fragShaderFile("shader.frag.spv", std::ios::binary);
     if (!fragShaderFile.is_open())
     {
-        std::cerr << "ERROR: failed to open the fragment shader file"
-                  << std::endl;
+        fmt::println(
+            std::cerr, "ERROR: failed to open the fragment shader file");
         exit(1);
     }
     std::string fragCode(
@@ -437,12 +438,28 @@ int main()
     std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {
         vertShaderStageCreateInfo, fragShaderStageCreateInfo};
 
+    VkVertexInputBindingDescription bindingDescription{
+        .binding = 0,
+        .stride = sizeof(Vertex),
+        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX};
+
+    std::array<VkVertexInputAttributeDescription, 2> attributeDescription = {
+        {{.binding = 0,
+          .location = 0,
+          .format = VK_FORMAT_R32G32_SFLOAT,
+          .offset = offsetof(Vertex, pos)},
+         {.binding = 0,
+          .location = 1,
+          .format = VK_FORMAT_R32G32B32_SFLOAT,
+          .offset = offsetof(Vertex, color)}}};
+
     VkPipelineVertexInputStateCreateInfo vertexInputState = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-        .vertexBindingDescriptionCount = 0,
-        .pVertexBindingDescriptions = nullptr,
-        .vertexAttributeDescriptionCount = 0,
-        .pVertexAttributeDescriptions = nullptr};
+        .vertexBindingDescriptionCount = 1,
+        .pVertexBindingDescriptions = &bindingDescription,
+        .vertexAttributeDescriptionCount =
+            static_cast<uint32_t>(attributeDescription.size()),
+        .pVertexAttributeDescriptions = attributeDescription.data()};
 
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
@@ -592,67 +609,97 @@ int main()
     VkCommandPool commandPool;
     VkCommandPoolCreateInfo commandPoolCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
         .queueFamilyIndex = queueFamilyIndex};
     result = vkCreateCommandPool(
         device, &commandPoolCreateInfo, nullptr, &commandPool);
     LogError("failed to create command pool", result);
 
-    std::vector<VkCommandBuffer> commandBuffers(swapchainImageCount);
+    VkCommandBuffer commandBuffer;
     VkCommandBufferAllocateInfo commandBuffersAllocateInfo{
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .commandPool = commandPool,
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = swapchainImageCount};
+        .commandBufferCount = 1};
     result = vkAllocateCommandBuffers(
-        device, &commandBuffersAllocateInfo, commandBuffers.data());
+        device, &commandBuffersAllocateInfo, &commandBuffer);
     LogError("failed to allocate command buffers", result);
 
     VkCommandBufferBeginInfo commandBufferBeginInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT};
 
-    VkClearColorValue clearColor = {0.0f, 0.0f, 1.0f, 0.0f};
+    VkClearColorValue clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
     VkClearValue clearValue = {.color = clearColor};
 
-    VkImageSubresourceRange imageRange = {
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .levelCount = 1,
-        .layerCount = 1};
+    const std::vector<Vertex> vertices = {
+        {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+        {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+        {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}};
 
-    VkImageSubresourceRange subresourceRange = {
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .baseMipLevel = 0,
-        .levelCount = 1,
-        .baseArrayLayer = 0,
-        .layerCount = 1};
+    VkBuffer vertexBuffer;
+    VkBufferCreateInfo bufferCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = vertices.size() * sizeof(Vertex),
+        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE};
+    result = vkCreateBuffer(device, &bufferCreateInfo, nullptr, &vertexBuffer);
+    LogError("failed to create vertex buffer", result);
 
-    for (size_t i = 0; i < swapchainImageCount; i++)
+    VkMemoryRequirements memoryRequirements;
+    vkGetBufferMemoryRequirements(device, vertexBuffer, &memoryRequirements);
+
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+
+    VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    uint32_t memoryTypeIndex;
+
+    fmt::println(
+        std::cout, "TypeFilter: {:#b}", memoryRequirements.memoryTypeBits);
+
+    fmt::println(std::cout, "Available Memory Types:");
+    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
     {
-        VkCommandBuffer& commandBuffer = commandBuffers.at(i);
-
-        VkRenderPassBeginInfo renderPassBeginInfo = {
-            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-            .renderPass = renderPass,
-            .framebuffer = framebuffers.at(i),
-            .renderArea =
-                {.offset = {0, 0}, .extent = surfaceCapabilities.currentExtent},
-            .clearValueCount = 1,
-            .pClearValues = &clearValue};
-
-        result = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
-        LogError("failed to start recording command buffer", result);
-
-        vkCmdBeginRenderPass(
-            commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-        vkCmdBindPipeline(
-            commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-
-        vkCmdEndRenderPass(commandBuffer);
-
-        result = vkEndCommandBuffer(commandBuffer);
-        LogError("failed to stop recording command buffer", result);
+        fmt::println(
+            std::cout, "\t{:#b}",
+            static_cast<uint32_t>(
+                memoryProperties.memoryTypes[i].propertyFlags));
     }
+
+    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
+    {
+        if ((memoryRequirements.memoryTypeBits & (1 << i)) &&
+            (memoryProperties.memoryTypes[i].propertyFlags & properties) == properties)
+        {
+            memoryTypeIndex = i;
+            break;
+        }
+        if (i == memoryProperties.memoryTypeCount - 1)
+        {
+            fmt::println(
+                std::cerr, "ERROR: failed to find suitable memory type");
+            exit(1);
+        }
+    }
+
+    VkMemoryAllocateInfo memoryAllocateInfo = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memoryRequirements.size,
+        .memoryTypeIndex = memoryTypeIndex};
+
+    VkDeviceMemory vertexBufferMemory;
+
+    result = vkAllocateMemory(
+        device, &memoryAllocateInfo, nullptr, &vertexBufferMemory);
+    LogError("failed to allocate vertex buffer memory", result);
+
+    vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
+    void* data;
+    vkMapMemory(device, vertexBufferMemory, 0, bufferCreateInfo.size, 0, &data);
+    memcpy(data, vertices.data(), static_cast<size_t>(bufferCreateInfo.size));
+    vkUnmapMemory(device, vertexBufferMemory);
 
     VkSemaphore semaphore = {};
     VkSemaphoreCreateInfo semaphoreCreateInfo = {
@@ -661,8 +708,15 @@ int main()
         vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore);
     LogError("failed to create semaphore", result);
     VkSemaphore renderSemaphore = {};
-    vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &renderSemaphore);
+    result = vkCreateSemaphore(
+        device, &semaphoreCreateInfo, nullptr, &renderSemaphore);
     LogError("failed to create semaphore", result);
+    VkFence fence;
+    VkFenceCreateInfo fenceCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT};
+    result = vkCreateFence(device, &fenceCreateInfo, nullptr, &fence);
+    LogError("failed to create fence", result);
 
     while (running)
     {
@@ -680,13 +734,46 @@ int main()
                 }
             }
         }
+
+        vkWaitForFences(
+            device, 1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+        vkResetFences(device, 1, &fence);
         uint32_t imageIndex = 0;
         result = vkAcquireNextImageKHR(
             device, swapchain, std::numeric_limits<uint64_t>::max(), semaphore,
             VK_NULL_HANDLE, &imageIndex);
         LogError("failed to aquire next image", result);
 
-        assert(imageIndex < commandBuffers.size());
+        vkResetCommandBuffer(commandBuffer, 0);
+
+        VkRenderPassBeginInfo renderPassBeginInfo = {
+            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+            .renderPass = renderPass,
+            .framebuffer = framebuffers.at(imageIndex),
+            .renderArea =
+                {.offset = {0, 0}, .extent = surfaceCapabilities.currentExtent},
+            .clearValueCount = 1,
+            .pClearValues = &clearValue};
+
+        result = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
+        LogError("failed to start recording command buffer", result);
+
+        vkCmdBeginRenderPass(
+            commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        vkCmdBindPipeline(
+            commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+        VkDeviceSize offset = 0;
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer, &offset);
+
+        vkCmdDraw(
+            commandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+
+        vkCmdEndRenderPass(commandBuffer);
+
+        result = vkEndCommandBuffer(commandBuffer);
+        LogError("failed to stop recording command buffer", result);
 
         VkPipelineStageFlags waitFlags =
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -696,10 +783,10 @@ int main()
             .pWaitSemaphores = &semaphore,
             .pWaitDstStageMask = &waitFlags,
             .commandBufferCount = 1,
-            .pCommandBuffers = &commandBuffers.at(imageIndex),
+            .pCommandBuffers = &commandBuffer,
             .signalSemaphoreCount = 1,
             .pSignalSemaphores = &renderSemaphore};
-        result = vkQueueSubmit(queue, 1, &submitInfo, nullptr);
+        result = vkQueueSubmit(queue, 1, &submitInfo, fence);
         LogError("failed to submit draw command buffer", result);
 
         VkPresentInfoKHR presentInfo = {

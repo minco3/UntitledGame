@@ -76,6 +76,8 @@
         "chrono": "cpp",
         "compare": "cpp",
         "concepts": "cpp",
-        "algorithm": "cpp"
+        "algorithm": "cpp",
+        "__std_stream": "cpp",
+        "iterator": "cpp"
     }
 }
