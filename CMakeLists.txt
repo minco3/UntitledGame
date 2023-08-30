@@ -16,15 +16,19 @@ include_directories(/opt/homebrew/include)
 include_directories(/usr/local/include)
 include_directories(~VulkanSDK)
 
-add_executable(SDL2Test main.cpp)
+file(GLOB source_files CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/*.cpp" )
+
+add_executable(SDL2Test main.cpp ${source_files})
 target_link_libraries(SDL2Test SDL2::SDL2)
 target_link_libraries(SDL2Test SDL2_image::SDL2_image)
 target_link_libraries(SDL2Test Vulkan::Vulkan)
 target_link_libraries(SDL2Test glm::glm)
 target_link_libraries(SDL2Test fmt::fmt)
 
-file(GLOB shader_files "${PROJECT_SOURCE_DIR}/shader/*")
-
+# maybe switch this to a batch file so its one command to compile all shaders rather than one per shader
+file(GLOB shader_files CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/shader/*")
 foreach(shader_file ${shader_files})
-    execute_process(COMMAND bash -c "${Vulkan_GLSLC_EXECUTABLE} -c -g ${shader_file}")
+    add_custom_command(TARGET SDL2Test
+        POST_BUILD
+        COMMAND bash -c "${Vulkan_GLSLC_EXECUTABLE} -c -g ${shader_file}")
 endforeach()

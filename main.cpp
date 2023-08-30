@@ -3,7 +3,6 @@
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_vulkan.h>
 #include <array>
-#include <bitset>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -14,11 +13,14 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_beta.h>
 #define VMA_IMPLEMENTATION
-#include "vulkanfmt.h"
+#include "vulkanfmt.hpp"
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <glm/glm.hpp>
 #include <vma/vk_mem_alloc.h>
+
+#include "Application.h"
+#include "Log.h"
 
 #define DEBUG
 
@@ -28,25 +30,26 @@ struct Vertex
     glm::vec3 color;
 };
 
-void LogError(const std::string& message, VkResult result)
-{
-    if (result != VK_SUCCESS)
-    {
-        fmt::println(std::cerr, "ERROR: {}: {}", message, result);
-        exit(1);
-    }
-}
-
 int main()
 {
+
+    try
+    {
+        Application app;
+        app.Run();
+    }
+    catch (std::runtime_error& e)
+    {
+        fmt::println(std::cerr, "Runtime Error: {}", e.what());
+        exit(1);
+    }
 
     VkResult result;
     bool running = true;
     SDL_Window* window;
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
     {
-        fmt::println(
-            std::cerr, "ERROR: error initializing sdl: {}", SDL_GetError());
+        LogError(fmt::format("Error initializing sdl: {}", SDL_GetError()));
     }
 
     window = SDL_CreateWindow(
@@ -54,8 +57,7 @@ int main()
         1200, 800, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
     if (window == nullptr)
     {
-        fmt::println(
-            std::cerr, "ERROR: error creating SDL window: ", SDL_GetError());
+        LogError(fmt::format("Error creating SDL window: ", SDL_GetError()));
     }
 
     std::vector<const char*> extNames = {
@@ -69,16 +71,13 @@ int main()
     if (SDL_Vulkan_GetInstanceExtensions(window, &numExtentions, nullptr) !=
         SDL_TRUE)
     {
-        fmt::println(
-            std::cerr,
-            "ERROR: error getting SDL required vulkan exension count");
+        LogError("Error getting SDL required vulkan exension count");
     }
     std::vector<const char*> sdlExtNames(numExtentions);
     if (SDL_Vulkan_GetInstanceExtensions(
             window, &numExtentions, sdlExtNames.data()) != SDL_TRUE)
     {
-        fmt::println(
-            std::cerr, "ERROR: error getting SDL required vulkan extensions");
+        LogError("Error getting SDL required vulkan extensions");
     }
 
     extNames.insert(extNames.end(), sdlExtNames.begin(), sdlExtNames.end());
@@ -86,14 +85,14 @@ int main()
     uint32_t instanceSupportedExtensionCount;
     result = vkEnumerateInstanceExtensionProperties(
         nullptr, &instanceSupportedExtensionCount, nullptr);
-    LogError("Failed to get instance supported extension count", result);
+    LogVulkanError("Failed to get instance supported extension count", result);
 
     std::vector<VkExtensionProperties> instanceSupportedExtensions(
         instanceSupportedExtensionCount);
     result = vkEnumerateInstanceExtensionProperties(
         nullptr, &instanceSupportedExtensionCount,
         instanceSupportedExtensions.data());
-    LogError("Failed to get instance supported extension count", result);
+    LogVulkanError("Failed to get instance supported extension count", result);
 
 #ifdef DEBUG
     fmt::println(std::cout, "Instance Supported Extensions:");
@@ -102,12 +101,16 @@ int main()
         fmt::println(std::cout, "\t{}", properties.extensionName);
     }
 #endif
-    for (const VkExtensionProperties& supportedExtention: instanceSupportedExtensions)
+    for (const VkExtensionProperties& supportedExtention :
+         instanceSupportedExtensions)
     {
-        if (!strcmp(supportedExtention.extensionName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME))
+        if (!strcmp(
+                supportedExtention.extensionName,
+                VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME))
         {
             extNames.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-            instanceCreateFlags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+            instanceCreateFlags |=
+                VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
         }
     }
     for (const char* extName : extNames)
@@ -122,9 +125,8 @@ int main()
             }
             else if (i == instanceSupportedExtensionCount - 1)
             {
-                fmt::println(
-                    std::cerr, "ERROR: Required extension not supported!");
-                return 1;
+                LogError(fmt::format(
+                    "Required extension {} not supported!", extName));
             }
         }
     }
@@ -135,7 +137,7 @@ int main()
     {
         fmt::println(std::cout, "\t{}", extName);
     }
-#endif //DEBUG
+#endif // DEBUG
 
     VkApplicationInfo applicationInfo = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -160,26 +162,24 @@ int main()
     VkSurfaceKHR surface;
     if (SDL_Vulkan_CreateSurface(window, instance, &surface) != SDL_TRUE)
     {
-        fmt::println(std::cerr, "ERROR: error creating surface");
-        exit(1);
+        LogError("Could not create SDL surface");
     }
 
-    LogError("error creating vulkan instance", result);
+    LogVulkanError("Could not create vulkan instance", result);
 
     uint32_t deviceCount = 0;
     result = vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
     if (deviceCount == 0)
     {
-        fmt::println(std::cerr, "ERROR: no vukan devices found!");
-        exit(1);
+        LogError("No vukan devices found!");
     }
-    LogError("error fetching physical device count", result);
+    LogVulkanError("Could not fetch physical device count", result);
 
     std::vector<VkPhysicalDevice> physicalDevices(
         static_cast<size_t>(deviceCount));
     result = vkEnumeratePhysicalDevices(
         instance, &deviceCount, &physicalDevices.front());
-    LogError("error enumerating physical devices", result);
+    LogVulkanError("Problem enumerating physical devices", result);
 
     fmt::println(std::cout, "Physical Devices:");
     for (uint32_t i = 0; i < deviceCount; i++)
@@ -197,8 +197,7 @@ int main()
         physicalDevice, &queueFamilyPropertyCount, nullptr);
     if (queueFamilyPropertyCount == 0)
     {
-        fmt::println(std::cerr, "ERROR: no physical device queues found");
-        exit(1);
+        LogError("No physical device queues found");
     }
     std::vector<VkQueueFamilyProperties> queueFamilyProperties(
         queueFamilyPropertyCount);
@@ -218,7 +217,10 @@ int main()
         VkBool32 supported;
         result = vkGetPhysicalDeviceSurfaceSupportKHR(
             physicalDevice, i, surface, &supported);
-        LogError("failed to get physical device support", result);
+        LogVulkanError(
+            fmt::format(
+                "Failed to check whether queue {} supports presentation", i),
+            result);
 
         fmt::println(
             std::cout, "\tQueue Family [{}]: {:#b} {} {}", i,
@@ -236,22 +238,22 @@ int main()
     uint32_t deviceSupportedExtensionsCount = 0;
     result = vkEnumerateDeviceExtensionProperties(
         physicalDevice, nullptr, &deviceSupportedExtensionsCount, nullptr);
-    LogError("error getting available device extension count", result);
+    LogVulkanError("error getting available device extension count", result);
 
     std::vector<VkExtensionProperties> deviceSupportedExtensions(
         static_cast<size_t>(deviceSupportedExtensionsCount));
     result = vkEnumerateDeviceExtensionProperties(
         physicalDevice, nullptr, &deviceSupportedExtensionsCount,
         deviceSupportedExtensions.data());
-    LogError("error getting available device extensions", result);
+    LogVulkanError("error getting available device extensions", result);
 
 #ifdef DEBUG
-    fmt::println(std::cout, "Physical Device Supported Extensions:");
+    fmt::println("Physical Device Supported Extensions:");
     for (const auto properties : deviceSupportedExtensions)
     {
         fmt::println("\t{}", properties.extensionName);
     }
-#endif //DEBUG
+#endif // DEBUG
 
     std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME};
@@ -271,12 +273,13 @@ int main()
     uint32_t surfaceFormatCount = 0;
     result = vkGetPhysicalDeviceSurfaceFormatsKHR(
         physicalDevice, surface, &surfaceFormatCount, nullptr);
-    LogError("Failed to get physical device format count", result);
+    LogVulkanError("Failed to get supported surface format count", result);
     std::vector<VkSurfaceFormatKHR> surfaceFormats(
         static_cast<size_t>(surfaceFormatCount));
     result = vkGetPhysicalDeviceSurfaceFormatsKHR(
         physicalDevice, surface, &surfaceFormatCount, surfaceFormats.data());
-    LogError("Failed to get physical device formats", result);
+    LogVulkanError(
+        "Failed to get surface formats supported by the device", result);
 
 #ifdef DEBUG
     fmt::println(std::cout, "Supported Formats:");
@@ -307,11 +310,7 @@ int main()
 
     result =
         vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device);
-    if (result != VK_SUCCESS)
-    {
-        LogError("error creating device", result);
-        exit(1);
-    }
+    LogVulkanError("Could not create vulkan logical device", result);
 
     uint32_t numImages = surfaceCapabilities.minImageCount + 1;
 
@@ -337,10 +336,9 @@ int main()
     if (surfaceFormat.format == VK_FORMAT_UNDEFINED)
     {
         surfaceFormat = surfaceFormats.at(0);
-        fmt::println(
-            std::cerr,
-            "WARNING: Requested format not found! falling back to: {} {}",
-            surfaceFormat.format, surfaceFormat.colorSpace);
+        LogWarning(fmt::format(
+            "Requested format not found! Falling back to: {} {}",
+            surfaceFormat.format, surfaceFormat.colorSpace));
     }
 
     VkSwapchainCreateInfoKHR swapchainCreateInfo = {
@@ -362,17 +360,17 @@ int main()
     VkSwapchainKHR swapchain;
     result =
         vkCreateSwapchainKHR(device, &swapchainCreateInfo, nullptr, &swapchain);
-    LogError("failed to create swapchain", result);
+    LogVulkanError("Failed to create swapchain", result);
 
     uint32_t swapchainImageCount = 0;
     result = vkGetSwapchainImagesKHR(
         device, swapchain, &swapchainImageCount, nullptr);
-    LogError("failed to get swapchain image count", result);
+    LogVulkanError("Failed to get swapchain image count", result);
     std::vector<VkImage> swapchainImages(
         static_cast<size_t>(swapchainImageCount));
     result = vkGetSwapchainImagesKHR(
         device, swapchain, &swapchainImageCount, swapchainImages.data());
-    LogError("Failed to get swapchain images", result);
+    LogVulkanError("Failed to get swapchain images", result);
 
     std::vector<VkImageView> swapchainImageViews(swapchainImages.size());
     for (size_t i = 0; i < swapchainImageViews.size(); i++)
@@ -397,59 +395,59 @@ int main()
         result = vkCreateImageView(
             device, &swapchainImageViewCreateInfo, nullptr,
             &swapchainImageView);
-        LogError("failed to create swapchain image view", result);
+        LogVulkanError("Failed to create swapchain image view", result);
     }
 
-    std::ifstream vertShaderFile("shader.vert.spv", std::ios::binary);
-    if (!vertShaderFile.is_open())
+    enum class ShaderType
     {
-        fmt::println(std::cerr, "ERROR: failed to open the vertex shader file");
-        exit(1);
-    }
-    std::string vertCode(
-        (std::istreambuf_iterator<char>(vertShaderFile)),
-        std::istreambuf_iterator<char>());
+        Vertex,
+        Fragment
+    };
 
-    std::ifstream fragShaderFile("shader.frag.spv", std::ios::binary);
-    if (!fragShaderFile.is_open())
+    struct Shader
     {
-        fmt::println(
-            std::cerr, "ERROR: failed to open the fragment shader file");
-        exit(1);
+        ShaderType type;
+        std::string filePath;
+        VkShaderModule shaderModule;
+    };
+
+    std::array<Shader, 2> shaders = {
+        {{ShaderType::Vertex, "shader.vert.spv"},
+         {ShaderType::Fragment, "shader.frag.spv"}}};
+
+    for (Shader& shader : shaders)
+    {
+        std::ifstream shaderCodeFile(shader.filePath, std::ios::binary);
+        if (!shaderCodeFile.is_open())
+        {
+            LogWarning(fmt::format(
+                "Requested shader file {} missing!", shader.filePath));
+        }
+        std::string shaderCode(
+            (std::istreambuf_iterator<char>(shaderCodeFile)),
+            std::istreambuf_iterator<char>());
+
+        VkShaderModuleCreateInfo vertShaderCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            .codeSize = shaderCode.size(),
+            .pCode = reinterpret_cast<const uint32_t*>(shaderCode.data())};
+
+        result = vkCreateShaderModule(
+            device, &vertShaderCreateInfo, nullptr, &shader.shaderModule);
+        LogVulkanError(
+            fmt::format("failed to create shader {}", shader.filePath), result);
     }
-    std::string fragCode(
-        (std::istreambuf_iterator<char>(fragShaderFile)),
-        std::istreambuf_iterator<char>());
-
-    VkShaderModuleCreateInfo vertShaderCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        .codeSize = vertCode.size(),
-        .pCode = reinterpret_cast<const uint32_t*>(vertCode.data())};
-    VkShaderModuleCreateInfo fragShaderCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        .codeSize = fragCode.size(),
-        .pCode = reinterpret_cast<const uint32_t*>(fragCode.data())};
-
-    VkShaderModule fragShader;
-    VkShaderModule vertShader;
-
-    result = vkCreateShaderModule(
-        device, &vertShaderCreateInfo, nullptr, &vertShader);
-    LogError("failed to create vertex shader", result);
-    result = vkCreateShaderModule(
-        device, &fragShaderCreateInfo, nullptr, &fragShader);
-    LogError("failed to create fragment shader", result);
 
     VkPipelineShaderStageCreateInfo vertShaderStageCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = VK_SHADER_STAGE_VERTEX_BIT,
-        .module = vertShader,
+        .module = shaders.at(0).shaderModule,
         .pName = "main"};
 
     VkPipelineShaderStageCreateInfo fragShaderStageCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .module = fragShader,
+        .module = shaders.at(1).shaderModule,
         .pName = "main"};
 
     std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {
@@ -549,7 +547,7 @@ int main()
     };
     result = vkCreatePipelineLayout(
         device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout);
-    LogError("failed to create pipeline layout", result);
+    LogVulkanError("failed to create pipeline layout", result);
 
     VkRenderPass renderPass;
 
@@ -577,7 +575,7 @@ int main()
         .pSubpasses = &subpass};
     result =
         vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, &renderPass);
-    LogError("failed to create render pass", result);
+    LogVulkanError("failed to create render pass", result);
 
     VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -598,7 +596,7 @@ int main()
     result = vkCreateGraphicsPipelines(
         device, VK_NULL_HANDLE, 1, &graphicsPipelineCreateInfo, nullptr,
         &pipeline);
-    LogError("failed to create graphics pipeline", result);
+    LogVulkanError("failed to create graphics pipeline", result);
 
     std::vector<VkFramebuffer> framebuffers(swapchainImageViews.size());
     for (size_t i = 0; i < swapchainImageViews.size(); i++)
@@ -615,7 +613,7 @@ int main()
 
         result = vkCreateFramebuffer(
             device, &framebufferCreateInfo, nullptr, &framebuffer);
-        LogError("failed to create swapchain", result);
+        LogVulkanError("failed to create swapchain", result);
     }
 
     const uint32_t queueFamilyIndex = 0;
@@ -630,7 +628,7 @@ int main()
         .queueFamilyIndex = queueFamilyIndex};
     result = vkCreateCommandPool(
         device, &commandPoolCreateInfo, nullptr, &commandPool);
-    LogError("failed to create command pool", result);
+    LogVulkanError("failed to create command pool", result);
 
     VkCommandBuffer commandBuffer;
     VkCommandBufferAllocateInfo commandBuffersAllocateInfo{
@@ -640,7 +638,7 @@ int main()
         .commandBufferCount = 1};
     result = vkAllocateCommandBuffers(
         device, &commandBuffersAllocateInfo, &commandBuffer);
-    LogError("failed to allocate command buffers", result);
+    LogVulkanError("failed to allocate command buffers", result);
 
     VkCommandBufferBeginInfo commandBufferBeginInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -661,7 +659,7 @@ int main()
         .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE};
     result = vkCreateBuffer(device, &bufferCreateInfo, nullptr, &vertexBuffer);
-    LogError("failed to create vertex buffer", result);
+    LogVulkanError("failed to create vertex buffer", result);
 
     VkMemoryRequirements memoryRequirements;
     vkGetBufferMemoryRequirements(device, vertexBuffer, &memoryRequirements);
@@ -711,7 +709,7 @@ int main()
 
     result = vkAllocateMemory(
         device, &memoryAllocateInfo, nullptr, &vertexBufferMemory);
-    LogError("failed to allocate vertex buffer memory", result);
+    LogVulkanError("failed to allocate vertex buffer memory", result);
 
     vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
     void* data;
@@ -724,17 +722,17 @@ int main()
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
     result =
         vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore);
-    LogError("failed to create semaphore", result);
+    LogVulkanError("failed to create semaphore", result);
     VkSemaphore renderSemaphore = {};
     result = vkCreateSemaphore(
         device, &semaphoreCreateInfo, nullptr, &renderSemaphore);
-    LogError("failed to create semaphore", result);
+    LogVulkanError("failed to create semaphore", result);
     VkFence fence;
     VkFenceCreateInfo fenceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .flags = VK_FENCE_CREATE_SIGNALED_BIT};
     result = vkCreateFence(device, &fenceCreateInfo, nullptr, &fence);
-    LogError("failed to create fence", result);
+    LogVulkanError("failed to create fence", result);
 
     while (running)
     {
@@ -760,7 +758,7 @@ int main()
         result = vkAcquireNextImageKHR(
             device, swapchain, std::numeric_limits<uint64_t>::max(), semaphore,
             VK_NULL_HANDLE, &imageIndex);
-        LogError("failed to aquire next image", result);
+        LogVulkanError("failed to aquire next image", result);
 
         vkResetCommandBuffer(commandBuffer, 0);
 
@@ -774,7 +772,7 @@ int main()
             .pClearValues = &clearValue};
 
         result = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
-        LogError("failed to start recording command buffer", result);
+        LogVulkanError("failed to start recording command buffer", result);
 
         vkCmdBeginRenderPass(
             commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -791,7 +789,7 @@ int main()
         vkCmdEndRenderPass(commandBuffer);
 
         result = vkEndCommandBuffer(commandBuffer);
-        LogError("failed to stop recording command buffer", result);
+        LogVulkanError("failed to stop recording command buffer", result);
 
         VkPipelineStageFlags waitFlags =
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -805,7 +803,7 @@ int main()
             .signalSemaphoreCount = 1,
             .pSignalSemaphores = &renderSemaphore};
         result = vkQueueSubmit(queue, 1, &submitInfo, fence);
-        LogError("failed to submit draw command buffer", result);
+        LogVulkanError("failed to submit draw command buffer", result);
 
         VkPresentInfoKHR presentInfo = {
             .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -815,7 +813,7 @@ int main()
             .pSwapchains = &swapchain,
             .pImageIndices = &imageIndex};
         result = vkQueuePresentKHR(queue, &presentInfo);
-        LogError("failed to present queue", result);
+        LogVulkanError("failed to present queue", result);
     }
     SDL_DestroyWindow(window);
     SDL_Quit();
