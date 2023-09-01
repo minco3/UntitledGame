@@ -1,4 +1,3 @@
-#define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_vulkan.h>
@@ -17,8 +16,6 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <glm/glm.hpp>
-#include <vma/vk_mem_alloc.h>
-
 #include "Application.h"
 #include "Log.h"
 
@@ -30,7 +27,7 @@ struct Vertex
     glm::vec3 color;
 };
 
-int main()
+int main(int argc, char **argv)
 {
 
     try
@@ -38,7 +35,7 @@ int main()
         Application app;
         app.Run();
     }
-    catch (std::runtime_error& e)
+    catch (std::runtime_error &e)
     {
         fmt::println(std::cerr, "Runtime Error: {}", e.what());
         exit(1);
@@ -46,7 +43,7 @@ int main()
 
     VkResult result;
     bool running = true;
-    SDL_Window* window;
+    SDL_Window *window;
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
     {
         LogError(fmt::format("Error initializing sdl: {}", SDL_GetError()));
@@ -57,15 +54,15 @@ int main()
         1200, 800, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
     if (window == nullptr)
     {
-        LogError(fmt::format("Error creating SDL window: ", SDL_GetError()));
+        LogError(fmt::format("Error creating SDL window: {}", SDL_GetError()));
     }
 
-    std::vector<const char*> extNames = {
+    std::vector<const char *> extNames = {
         VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME};
 
     VkInstanceCreateFlags instanceCreateFlags = {};
 
-    std::vector<const char*> instanceLayers = {"VK_LAYER_KHRONOS_validation"};
+    std::vector<const char *> instanceLayers = {"VK_LAYER_KHRONOS_validation"};
 
     unsigned int numExtentions;
     if (SDL_Vulkan_GetInstanceExtensions(window, &numExtentions, nullptr) !=
@@ -73,7 +70,7 @@ int main()
     {
         LogError("Error getting SDL required vulkan exension count");
     }
-    std::vector<const char*> sdlExtNames(numExtentions);
+    std::vector<const char *> sdlExtNames(numExtentions);
     if (SDL_Vulkan_GetInstanceExtensions(
             window, &numExtentions, sdlExtNames.data()) != SDL_TRUE)
     {
@@ -96,12 +93,12 @@ int main()
 
 #ifdef DEBUG
     fmt::println(std::cout, "Instance Supported Extensions:");
-    for (const VkExtensionProperties& properties : instanceSupportedExtensions)
+    for (const VkExtensionProperties &properties : instanceSupportedExtensions)
     {
         fmt::println(std::cout, "\t{}", properties.extensionName);
     }
 #endif
-    for (const VkExtensionProperties& supportedExtention :
+    for (const VkExtensionProperties &supportedExtention :
          instanceSupportedExtensions)
     {
         if (!strcmp(
@@ -113,11 +110,11 @@ int main()
                 VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
         }
     }
-    for (const char* extName : extNames)
+    for (const char *extName : extNames)
     {
         for (uint32_t i = 0; i < instanceSupportedExtensionCount; i++)
         {
-            const VkExtensionProperties& properties =
+            const VkExtensionProperties &properties =
                 instanceSupportedExtensions.at(i);
             if (!strcmp(extName, properties.extensionName))
             {
@@ -133,7 +130,7 @@ int main()
 
 #ifdef DEBUG
     fmt::println(std::cout, "Enabled exensions:");
-    for (const char* extName : extNames)
+    for (const char *extName : extNames)
     {
         fmt::println(std::cout, "\t{}", extName);
     }
@@ -212,7 +209,7 @@ int main()
     fmt::println(std::cout, "Queues:");
     for (uint32_t i = 0; i < queueFamilyPropertyCount; i++)
     {
-        const VkQueueFamilyProperties& properties = queueFamilyProperties.at(i);
+        const VkQueueFamilyProperties &properties = queueFamilyProperties.at(i);
 
         VkBool32 supported;
         result = vkGetPhysicalDeviceSurfaceSupportKHR(
@@ -255,10 +252,10 @@ int main()
     }
 #endif // DEBUG
 
-    std::vector<const char*> deviceExtensions = {
+    std::vector<const char *> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
-    for (const auto& extension : deviceSupportedExtensions)
+    for (const auto &extension : deviceSupportedExtensions)
     {
         // https://vulkan.lunarg.com/doc/view/1.3.250.1/mac/1.3-extensions/vkspec.html#VUID-VkDeviceCreateInfo-pProperties-04451
         if (!strcmp(
@@ -283,7 +280,7 @@ int main()
 
 #ifdef DEBUG
     fmt::println(std::cout, "Supported Formats:");
-    for (const auto& surfaceFormat : surfaceFormats)
+    for (const auto &surfaceFormat : surfaceFormats)
     {
         fmt::println(
             std::cout, "\t{}, {}", surfaceFormat.colorSpace,
@@ -324,7 +321,7 @@ int main()
     }
     else
     {
-        for (const VkSurfaceFormatKHR& format : surfaceFormats)
+        for (const VkSurfaceFormatKHR &format : surfaceFormats)
         {
             if (format.format == VK_FORMAT_B8G8R8A8_UNORM)
             {
@@ -375,7 +372,7 @@ int main()
     std::vector<VkImageView> swapchainImageViews(swapchainImages.size());
     for (size_t i = 0; i < swapchainImageViews.size(); i++)
     {
-        VkImageView& swapchainImageView = swapchainImageViews.at(i);
+        VkImageView &swapchainImageView = swapchainImageViews.at(i);
         VkImageViewCreateInfo swapchainImageViewCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = swapchainImages.at(i),
@@ -415,7 +412,7 @@ int main()
         {{ShaderType::Vertex, "shader.vert.spv"},
          {ShaderType::Fragment, "shader.frag.spv"}}};
 
-    for (Shader& shader : shaders)
+    for (Shader &shader : shaders)
     {
         std::ifstream shaderCodeFile(shader.filePath, std::ios::binary);
         if (!shaderCodeFile.is_open())
@@ -430,7 +427,7 @@ int main()
         VkShaderModuleCreateInfo vertShaderCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
             .codeSize = shaderCode.size(),
-            .pCode = reinterpret_cast<const uint32_t*>(shaderCode.data())};
+            .pCode = reinterpret_cast<const uint32_t *>(shaderCode.data())};
 
         result = vkCreateShaderModule(
             device, &vertShaderCreateInfo, nullptr, &shader.shaderModule);
@@ -601,7 +598,7 @@ int main()
     std::vector<VkFramebuffer> framebuffers(swapchainImageViews.size());
     for (size_t i = 0; i < swapchainImageViews.size(); i++)
     {
-        VkFramebuffer& framebuffer = framebuffers.at(i);
+        VkFramebuffer &framebuffer = framebuffers.at(i);
         VkFramebufferCreateInfo framebufferCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
             .renderPass = renderPass,
@@ -712,7 +709,7 @@ int main()
     LogVulkanError("failed to allocate vertex buffer memory", result);
 
     vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
-    void* data;
+    void *data;
     vkMapMemory(device, vertexBufferMemory, 0, bufferCreateInfo.size, 0, &data);
     memcpy(data, vertices.data(), static_cast<size_t>(bufferCreateInfo.size));
     vkUnmapMemory(device, vertexBufferMemory);
