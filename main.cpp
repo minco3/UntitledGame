@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 
     window = SDL_CreateWindow(
         "SDL2 VULKAN TEST", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        1200, 800, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN);
+        1200, 800, SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN);
     if (window == nullptr)
     {
         LogError(fmt::format("Error creating SDL window: {}", SDL_GetError()));
