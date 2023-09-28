@@ -19,10 +19,15 @@ include_directories(~VulkanSDK)
 file(GLOB source_files CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/*.cpp" )
 
 add_executable(SDL2Test main.cpp ${source_files})
+target_link_libraries(SDL2Test SDL2::SDL2main)
 target_link_libraries(SDL2Test SDL2::SDL2)
 target_link_libraries(SDL2Test SDL2_image::SDL2_image)
 target_link_libraries(SDL2Test Vulkan::Vulkan)
+if (WIN32)
+target_link_libraries(SDL2Test glm)
+else()
 target_link_libraries(SDL2Test glm::glm)
+endif (WIN32)
 target_link_libraries(SDL2Test fmt::fmt)
 
 # maybe switch this to a batch file so its one command to compile all shaders rather than one per shader
