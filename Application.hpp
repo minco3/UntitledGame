@@ -1,5 +1,5 @@
 #pragma once
-#include "Vulkan.hpp"
+#include "Video.hpp"
 
 class Application
 {
@@ -7,5 +7,7 @@ public:
     Application();
     void Run();
     void Update();
+
 private:
+    Video m_Video;
 };

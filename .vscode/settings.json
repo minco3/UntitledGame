@@ -78,7 +78,27 @@
         "concepts": "cpp",
         "algorithm": "cpp",
         "__std_stream": "cpp",
-        "iterator": "cpp"
+        "iterator": "cpp",
+        "csignal": "cpp",
+        "strstream": "cpp",
+        "*.tcc": "cpp",
+        "cfenv": "cpp",
+        "codecvt": "cpp",
+        "functional": "cpp",
+        "memory_resource": "cpp",
+        "numeric": "cpp",
+        "random": "cpp",
+        "source_location": "cpp",
+        "utility": "cpp",
+        "numbers": "cpp",
+        "ranges": "cpp",
+        "semaphore": "cpp",
+        "span": "cpp",
+        "stop_token": "cpp",
+        "thread": "cpp",
+        "cinttypes": "cpp",
+        "typeindex": "cpp",
+        "valarray": "cpp"
     },
     "C_Cpp.clang_format_style": "{ BasedOnStyle: LLVM, UseTab: Never, IndentWidth: 4, TabWidth: 4, BreakBeforeBraces: Allman, AllowShortIfStatementsOnASingleLine: false, IndentCaseLabels: false, ColumnLimit: 80, AccessModifierOffset: -4, NamespaceIndentation: All, FixNamespaceComments: false, PointerAlignment: Left, Cpp11BracedListStyle: true, AlignAfterOpenBracket: AlwaysBreak}"
 }

@@ -1,15 +1,8 @@
-#include "Application.h"
+#include "Application.hpp"
 #include <stdexcept>
 
-Application::Application()
-{
-}
+Application::Application() {}
 
-void Application::Run()
-{
-    
-}
+void Application::Run() {}
 
-void Application::Update()
-{
-}
+void Application::Update() {}

@@ -1,5 +1,5 @@
-#include "Application.h"
-#include "Log.h"
+#include "Application.hpp"
+#include "Log.hpp"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_vulkan.h>
@@ -27,7 +27,10 @@ struct Vertex
 
 int main(int argc, char** argv)
 {
-
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0)
+    {
+        LogError(fmt::format("Error initializing sdl: {}", SDL_GetError()));
+    }
     try
     {
         Application app;
@@ -38,163 +41,10 @@ int main(int argc, char** argv)
         LogError(fmt::format("Runtime Error: {}\n", e.what()));
         exit(1);
     }
+    SDL_Quit();
 
     VkResult result;
     bool running = true;
-    SDL_Window* window;
-    if (SDL_Init(SDL_INIT_VIDEO) != 0)
-    {
-        LogError(fmt::format("Error initializing sdl: {}", SDL_GetError()));
-    }
-
-    window = SDL_CreateWindow(
-        "SDL2 VULKAN TEST", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        1200, 800, SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN);
-    if (window == nullptr)
-    {
-        LogError(fmt::format("Error creating SDL window: {}", SDL_GetError()));
-    }
-
-    std::vector<const char*> extNames = {
-        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME};
-
-    VkInstanceCreateFlags instanceCreateFlags = {};
-
-    std::vector<const char*> instanceLayers = {"VK_LAYER_KHRONOS_validation"};
-
-    unsigned int numExtentions;
-    if (SDL_Vulkan_GetInstanceExtensions(window, &numExtentions, nullptr) !=
-        SDL_TRUE)
-    {
-        LogError("Error getting SDL required vulkan exension count");
-    }
-    std::vector<const char*> sdlExtNames(numExtentions);
-    if (SDL_Vulkan_GetInstanceExtensions(
-            window, &numExtentions, sdlExtNames.data()) != SDL_TRUE)
-    {
-        LogError("Error getting SDL required vulkan extensions");
-    }
-
-    extNames.insert(extNames.end(), sdlExtNames.begin(), sdlExtNames.end());
-
-    uint32_t instanceSupportedExtensionCount;
-    result = vkEnumerateInstanceExtensionProperties(
-        nullptr, &instanceSupportedExtensionCount, nullptr);
-    LogVulkanError("Failed to get instance supported extension count", result);
-
-    std::vector<VkExtensionProperties> instanceSupportedExtensions(
-        instanceSupportedExtensionCount);
-    result = vkEnumerateInstanceExtensionProperties(
-        nullptr, &instanceSupportedExtensionCount,
-        instanceSupportedExtensions.data());
-    LogVulkanError("Failed to get instance supported extension count", result);
-
-    LogDebug("Instance Supported Extensions:");
-    for (const VkExtensionProperties& properties : instanceSupportedExtensions)
-    {
-        LogDebug(fmt::format("\t{}", properties.extensionName));
-    }
-    for (const VkExtensionProperties& supportedExtention :
-         instanceSupportedExtensions)
-    {
-        if (!strcmp(
-                supportedExtention.extensionName,
-                VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME))
-        {
-            extNames.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-            instanceCreateFlags |=
-                VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-        }
-    }
-    for (const char* extName : extNames)
-    {
-        for (uint32_t i = 0; i < instanceSupportedExtensionCount; i++)
-        {
-            const VkExtensionProperties& properties =
-                instanceSupportedExtensions.at(i);
-            if (!strcmp(extName, properties.extensionName))
-            {
-                break;
-            }
-            else if (i == instanceSupportedExtensionCount - 1)
-            {
-                LogError(fmt::format(
-                    "Required extension {} not supported!", extName));
-            }
-        }
-    }
-
-    LogDebug("Enabled exensions:");
-    for (const char* extName : extNames)
-    {
-        LogDebug(fmt::format("\t{}", extName));
-    }
-
-    VkApplicationInfo applicationInfo = {
-        .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-        .pApplicationName = "SDL TEST",
-        .applicationVersion = 1,
-        .pEngineName = nullptr,
-        .apiVersion = VK_API_VERSION_1_3};
-
-    VkInstanceCreateInfo instanceCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .flags = instanceCreateFlags,
-        .pApplicationInfo = &applicationInfo,
-        .enabledLayerCount = static_cast<uint32_t>(instanceLayers.size()),
-        .ppEnabledLayerNames = instanceLayers.data(),
-        .enabledExtensionCount = static_cast<uint32_t>(extNames.size()),
-        .ppEnabledExtensionNames = extNames.data()};
-
-    VkInstance instance;
-
-    result = vkCreateInstance(&instanceCreateInfo, nullptr, &instance);
-
-    VkSurfaceKHR surface;
-    if (SDL_Vulkan_CreateSurface(window, instance, &surface) != SDL_TRUE)
-    {
-        LogError("Could not create SDL surface");
-    }
-
-    LogVulkanError("Could not create vulkan instance", result);
-
-    uint32_t deviceCount = 0;
-    result = vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
-    if (deviceCount == 0)
-    {
-        LogError("No vukan devices found!");
-    }
-    LogVulkanError("Could not fetch physical device count", result);
-
-    std::vector<VkPhysicalDevice> physicalDevices(
-        static_cast<size_t>(deviceCount));
-    result = vkEnumeratePhysicalDevices(
-        instance, &deviceCount, &physicalDevices.front());
-    LogVulkanError("Problem enumerating physical devices", result);
-
-    LogDebug("Physical Devices:");
-    for (uint32_t i = 0; i < deviceCount; i++)
-    {
-        VkPhysicalDeviceProperties properties;
-        vkGetPhysicalDeviceProperties(physicalDevices.at(i), &properties);
-        LogDebug(fmt::format(
-            "\tPhysical device [{}]: {}", i, properties.deviceName));
-    }
-
-    VkPhysicalDevice physicalDevice = physicalDevices[0];
-
-    uint32_t queueFamilyPropertyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(
-        physicalDevice, &queueFamilyPropertyCount, nullptr);
-    if (queueFamilyPropertyCount == 0)
-    {
-        LogError("No physical device queues found");
-    }
-    std::vector<VkQueueFamilyProperties> queueFamilyProperties(
-        queueFamilyPropertyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(
-        physicalDevice, &queueFamilyPropertyCount,
-        queueFamilyProperties.data());
 
     std::vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos(
         static_cast<size_t>(queueFamilyPropertyCount));
@@ -282,19 +132,6 @@ int main(int argc, char** argv)
 
     LogDebug(fmt::format(
         "Surface capabiltiies:\t{}", surfaceCapabilities.currentExtent));
-
-    VkDevice device = {};
-    VkDeviceCreateInfo deviceCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .queueCreateInfoCount =
-            static_cast<uint32_t>(deviceQueueCreateInfos.size()),
-        .pQueueCreateInfos = deviceQueueCreateInfos.data(),
-        .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
-        .ppEnabledExtensionNames = deviceExtensions.data()};
-
-    result =
-        vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device);
-    LogVulkanError("Could not create vulkan logical device", result);
 
     uint32_t numImages = surfaceCapabilities.minImageCount + 1;
 
@@ -796,8 +633,6 @@ int main(int argc, char** argv)
         result = vkQueuePresentKHR(queue, &presentInfo);
         LogVulkanError("failed to present queue", result);
     }
-    SDL_DestroyWindow(window);
-    SDL_Quit();
 
     return 0;
 }
