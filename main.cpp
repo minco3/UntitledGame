@@ -1,9 +1,14 @@
+#include "Application.h"
+#include "Log.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_vulkan.h>
 #include <array>
 #include <filesystem>
+#include <fmt/format.h>
+#include <fmt/ostream.h>
 #include <fstream>
+#include <glm/glm.hpp>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -11,15 +16,8 @@
 #include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_beta.h>
-#define VMA_IMPLEMENTATION
-#include "vulkanfmt.hpp"
-#include <fmt/format.h>
-#include <fmt/ostream.h>
-#include <glm/glm.hpp>
-#include "Application.h"
-#include "Log.h"
 
-#define DEBUG
+// #define DEBUG
 
 struct Vertex
 {
@@ -27,7 +25,7 @@ struct Vertex
     glm::vec3 color;
 };
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
 
     try
@@ -35,15 +33,15 @@ int main(int argc, char **argv)
         Application app;
         app.Run();
     }
-    catch (std::runtime_error &e)
+    catch (std::runtime_error& e)
     {
-        fmt::println(std::cerr, "Runtime Error: {}", e.what());
+        LogError(fmt::format("Runtime Error: {}\n", e.what()));
         exit(1);
     }
 
     VkResult result;
     bool running = true;
-    SDL_Window *window;
+    SDL_Window* window;
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
     {
         LogError(fmt::format("Error initializing sdl: {}", SDL_GetError()));
@@ -57,12 +55,12 @@ int main(int argc, char **argv)
         LogError(fmt::format("Error creating SDL window: {}", SDL_GetError()));
     }
 
-    std::vector<const char *> extNames = {
+    std::vector<const char*> extNames = {
         VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME};
 
     VkInstanceCreateFlags instanceCreateFlags = {};
 
-    std::vector<const char *> instanceLayers = {"VK_LAYER_KHRONOS_validation"};
+    std::vector<const char*> instanceLayers = {"VK_LAYER_KHRONOS_validation"};
 
     unsigned int numExtentions;
     if (SDL_Vulkan_GetInstanceExtensions(window, &numExtentions, nullptr) !=
@@ -70,7 +68,7 @@ int main(int argc, char **argv)
     {
         LogError("Error getting SDL required vulkan exension count");
     }
-    std::vector<const char *> sdlExtNames(numExtentions);
+    std::vector<const char*> sdlExtNames(numExtentions);
     if (SDL_Vulkan_GetInstanceExtensions(
             window, &numExtentions, sdlExtNames.data()) != SDL_TRUE)
     {
@@ -91,14 +89,12 @@ int main(int argc, char **argv)
         instanceSupportedExtensions.data());
     LogVulkanError("Failed to get instance supported extension count", result);
 
-#ifdef DEBUG
-    fmt::println(std::cout, "Instance Supported Extensions:");
-    for (const VkExtensionProperties &properties : instanceSupportedExtensions)
+    LogDebug("Instance Supported Extensions:");
+    for (const VkExtensionProperties& properties : instanceSupportedExtensions)
     {
-        fmt::println(std::cout, "\t{}", properties.extensionName);
+        LogDebug(fmt::format("\t{}", properties.extensionName));
     }
-#endif
-    for (const VkExtensionProperties &supportedExtention :
+    for (const VkExtensionProperties& supportedExtention :
          instanceSupportedExtensions)
     {
         if (!strcmp(
@@ -110,11 +106,11 @@ int main(int argc, char **argv)
                 VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
         }
     }
-    for (const char *extName : extNames)
+    for (const char* extName : extNames)
     {
         for (uint32_t i = 0; i < instanceSupportedExtensionCount; i++)
         {
-            const VkExtensionProperties &properties =
+            const VkExtensionProperties& properties =
                 instanceSupportedExtensions.at(i);
             if (!strcmp(extName, properties.extensionName))
             {
@@ -128,13 +124,11 @@ int main(int argc, char **argv)
         }
     }
 
-#ifdef DEBUG
-    fmt::println(std::cout, "Enabled exensions:");
-    for (const char *extName : extNames)
+    LogDebug("Enabled exensions:");
+    for (const char* extName : extNames)
     {
-        fmt::println(std::cout, "\t{}", extName);
+        LogDebug(fmt::format("\t{}", extName));
     }
-#endif // DEBUG
 
     VkApplicationInfo applicationInfo = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -178,13 +172,13 @@ int main(int argc, char **argv)
         instance, &deviceCount, &physicalDevices.front());
     LogVulkanError("Problem enumerating physical devices", result);
 
-    fmt::println(std::cout, "Physical Devices:");
+    LogDebug("Physical Devices:");
     for (uint32_t i = 0; i < deviceCount; i++)
     {
         VkPhysicalDeviceProperties properties;
         vkGetPhysicalDeviceProperties(physicalDevices.at(i), &properties);
-        fmt::println(
-            std::cout, "\tPhysical device [{}]: {}", i, properties.deviceName);
+        LogDebug(fmt::format(
+            "\tPhysical device [{}]: {}", i, properties.deviceName));
     }
 
     VkPhysicalDevice physicalDevice = physicalDevices[0];
@@ -206,10 +200,10 @@ int main(int argc, char **argv)
         static_cast<size_t>(queueFamilyPropertyCount));
     const float priority = 1.0f;
 
-    fmt::println(std::cout, "Queues:");
+    LogDebug("Queues:");
     for (uint32_t i = 0; i < queueFamilyPropertyCount; i++)
     {
-        const VkQueueFamilyProperties &properties = queueFamilyProperties.at(i);
+        const VkQueueFamilyProperties& properties = queueFamilyProperties.at(i);
 
         VkBool32 supported;
         result = vkGetPhysicalDeviceSurfaceSupportKHR(
@@ -219,10 +213,9 @@ int main(int argc, char **argv)
                 "Failed to check whether queue {} supports presentation", i),
             result);
 
-        fmt::println(
-            std::cout, "\tQueue Family [{}]: {:#b} {} {}", i,
-            properties.queueFlags, properties.queueCount,
-            static_cast<bool>(supported));
+        LogDebug(fmt::format(
+            "\tQueue Family [{}]: {:#b} {} {}", i, properties.queueFlags,
+            properties.queueCount, static_cast<bool>(supported)));
 
         VkDeviceQueueCreateInfo deviceQueueCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -244,18 +237,16 @@ int main(int argc, char **argv)
         deviceSupportedExtensions.data());
     LogVulkanError("error getting available device extensions", result);
 
-#ifdef DEBUG
-    fmt::println("Physical Device Supported Extensions:");
+    LogDebug("Physical Device Supported Extensions:");
     for (const auto properties : deviceSupportedExtensions)
     {
-        fmt::println("\t{}", properties.extensionName);
+        LogDebug(fmt::format("\t{}", properties.extensionName));
     }
-#endif // DEBUG
 
-    std::vector<const char *> deviceExtensions = {
+    std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
-    for (const auto &extension : deviceSupportedExtensions)
+    for (const auto& extension : deviceSupportedExtensions)
     {
         // https://vulkan.lunarg.com/doc/view/1.3.250.1/mac/1.3-extensions/vkspec.html#VUID-VkDeviceCreateInfo-pProperties-04451
         if (!strcmp(
@@ -278,23 +269,19 @@ int main(int argc, char **argv)
     LogVulkanError(
         "Failed to get surface formats supported by the device", result);
 
-#ifdef DEBUG
-    fmt::println(std::cout, "Supported Formats:");
-    for (const auto &surfaceFormat : surfaceFormats)
+    LogDebug("Supported Formats:");
+    for (const auto& surfaceFormat : surfaceFormats)
     {
-        fmt::println(
-            std::cout, "\t{}, {}", surfaceFormat.colorSpace,
-            surfaceFormat.format);
+        LogDebug(fmt::format(
+            "\t{}, {}", surfaceFormat.colorSpace, surfaceFormat.format));
     }
-#endif
 
     VkSurfaceCapabilitiesKHR surfaceCapabilities;
     result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
         physicalDevice, surface, &surfaceCapabilities);
 
-    fmt::println(
-        std::cout, "Surface capabiltiies:\n\t{}",
-        surfaceCapabilities.currentExtent);
+    LogDebug(fmt::format(
+        "Surface capabiltiies:\t{}", surfaceCapabilities.currentExtent));
 
     VkDevice device = {};
     VkDeviceCreateInfo deviceCreateInfo = {
@@ -321,7 +308,7 @@ int main(int argc, char **argv)
     }
     else
     {
-        for (const VkSurfaceFormatKHR &format : surfaceFormats)
+        for (const VkSurfaceFormatKHR& format : surfaceFormats)
         {
             if (format.format == VK_FORMAT_B8G8R8A8_UNORM)
             {
@@ -372,7 +359,7 @@ int main(int argc, char **argv)
     std::vector<VkImageView> swapchainImageViews(swapchainImages.size());
     for (size_t i = 0; i < swapchainImageViews.size(); i++)
     {
-        VkImageView &swapchainImageView = swapchainImageViews.at(i);
+        VkImageView& swapchainImageView = swapchainImageViews.at(i);
         VkImageViewCreateInfo swapchainImageViewCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = swapchainImages.at(i),
@@ -412,7 +399,7 @@ int main(int argc, char **argv)
         {{ShaderType::Vertex, "shader.vert.spv"},
          {ShaderType::Fragment, "shader.frag.spv"}}};
 
-    for (Shader &shader : shaders)
+    for (Shader& shader : shaders)
     {
         std::ifstream shaderCodeFile(shader.filePath, std::ios::binary);
         if (!shaderCodeFile.is_open())
@@ -427,7 +414,7 @@ int main(int argc, char **argv)
         VkShaderModuleCreateInfo vertShaderCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
             .codeSize = shaderCode.size(),
-            .pCode = reinterpret_cast<const uint32_t *>(shaderCode.data())};
+            .pCode = reinterpret_cast<const uint32_t*>(shaderCode.data())};
 
         result = vkCreateShaderModule(
             device, &vertShaderCreateInfo, nullptr, &shader.shaderModule);
@@ -598,7 +585,7 @@ int main(int argc, char **argv)
     std::vector<VkFramebuffer> framebuffers(swapchainImageViews.size());
     for (size_t i = 0; i < swapchainImageViews.size(); i++)
     {
-        VkFramebuffer &framebuffer = framebuffers.at(i);
+        VkFramebuffer& framebuffer = framebuffers.at(i);
         VkFramebufferCreateInfo framebufferCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
             .renderPass = renderPass,
@@ -668,16 +655,15 @@ int main(int argc, char **argv)
                                        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     uint32_t memoryTypeIndex;
 
-    fmt::println(
-        std::cout, "TypeFilter: {:#b}", memoryRequirements.memoryTypeBits);
+    LogDebug(
+        fmt::format("TypeFilter: {:#b}", memoryRequirements.memoryTypeBits));
 
-    fmt::println(std::cout, "Available Memory Types:");
+    LogDebug(fmt::format("Available Memory Types:"));
     for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
     {
-        fmt::println(
-            std::cout, "\t{:#b}",
-            static_cast<uint32_t>(
-                memoryProperties.memoryTypes[i].propertyFlags));
+        LogDebug(fmt::format(
+            "\t{:#b}", static_cast<uint32_t>(
+                           memoryProperties.memoryTypes[i].propertyFlags)));
     }
 
     for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
@@ -691,9 +677,7 @@ int main(int argc, char **argv)
         }
         if (i == memoryProperties.memoryTypeCount - 1)
         {
-            fmt::println(
-                std::cerr, "ERROR: failed to find suitable memory type");
-            exit(1);
+            LogError("ERROR: failed to find suitable memory type\n");
         }
     }
 
@@ -709,7 +693,7 @@ int main(int argc, char **argv)
     LogVulkanError("failed to allocate vertex buffer memory", result);
 
     vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
-    void *data;
+    void* data;
     vkMapMemory(device, vertexBufferMemory, 0, bufferCreateInfo.size, 0, &data);
     memcpy(data, vertices.data(), static_cast<size_t>(bufferCreateInfo.size));
     vkUnmapMemory(device, vertexBufferMemory);

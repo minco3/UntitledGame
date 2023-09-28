@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vulkan/vulkan.h>
 #include <fmt/ostream.h>
+#include "vulkanfmt.hpp"
 
 void LogError(const std::string& message)
 {
@@ -13,7 +14,14 @@ void LogError(const std::string& message)
 
 void LogWarning(const std::string& message)
 {
-    fmt::println(std::cerr, "WARNING: {}", message);
+    fmt::print(std::cerr, "WARNING: {}\n", message);
+}
+
+void LogDebug(const std::string& message)
+{
+#ifdef DEBUG
+    fmt::print(std::cout, "DEBUG: {}\n", message);
+#endif
 }
 
 void LogVulkanError(const std::string& message, VkResult result)
