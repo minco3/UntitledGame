@@ -5,6 +5,7 @@
 #include <SDL2/SDL_vulkan.h>
 #include <algorithm>
 #include <fmt/format.h>
+#include <vulkan/vulkan_beta.h>
 
 Video::Video()
     : m_Window(
@@ -62,15 +63,16 @@ void Video::CreateDevice()
     VkPhysicalDevice physicalDevice = physicalDevices[0];
     std::vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos =
         GetDeviceQueueCreateInfos(physicalDevice);
+    std::vector<const char*> deviceExtensions =
+        GetDeviceExtentionNames(physicalDevice);
 
-            VkDeviceCreateInfo deviceCreateInfo = {
-                .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-                .queueCreateInfoCount =
-                    static_cast<uint32_t>(deviceQueueCreateInfos.size()),
-                .pQueueCreateInfos = deviceQueueCreateInfos.data(),
-                .enabledExtensionCount =
-                    static_cast<uint32_t>(deviceExtensions.size()),
-                .ppEnabledExtensionNames = deviceExtensions.data()};
+    VkDeviceCreateInfo deviceCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .queueCreateInfoCount =
+            static_cast<uint32_t>(deviceQueueCreateInfos.size()),
+        .pQueueCreateInfos = deviceQueueCreateInfos.data(),
+        .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
+        .ppEnabledExtensionNames = deviceExtensions.data()};
 
     result =
         vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &m_Device);
@@ -198,16 +200,17 @@ Video::GetDeviceQueueCreateInfos(VkPhysicalDevice physicalDevice)
     std::vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos(
         static_cast<size_t>(queueFamilyPropertyCount));
 
-    m_DeviceQueues.resize(queueFamilyPropertyCount, {{std::vector<float>{1.0f}}});
+    m_DeviceQueues.resize(
+        queueFamilyPropertyCount, {{std::vector<float>{1.0f}}});
 
     LogDebug("Queues:");
     for (uint32_t i = 0; i < queueFamilyPropertyCount; i++)
     {
         const VkQueueFamilyProperties& properties = queueFamilyProperties.at(i);
 
-        VkBool32 supported;
         result = vkGetPhysicalDeviceSurfaceSupportKHR(
-            physicalDevice, i, m_Surface, &supported);
+            physicalDevice, i, m_Surface,
+            &m_DeviceQueues.at(i).m_PresentationSupported);
         LogVulkanError(
             fmt::format(
                 "Failed to check whether queue {} supports presentation", i),
@@ -215,7 +218,8 @@ Video::GetDeviceQueueCreateInfos(VkPhysicalDevice physicalDevice)
 
         LogDebug(fmt::format(
             "\tQueue Family [{}]: {:#b} {} {}", i, properties.queueFlags,
-            properties.queueCount, static_cast<bool>(supported)));
+            properties.queueCount,
+            static_cast<bool>(m_DeviceQueues.at(i).m_PresentationSupported)));
 
         VkDeviceQueueCreateInfo deviceQueueCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -225,4 +229,44 @@ Video::GetDeviceQueueCreateInfos(VkPhysicalDevice physicalDevice)
         deviceQueueCreateInfos.at(i) = (deviceQueueCreateInfo);
     }
     return deviceQueueCreateInfos;
+}
+
+std::vector<const char*>
+Video::GetDeviceExtentionNames(VkPhysicalDevice physicalDevice)
+{
+    VkResult result;
+    uint32_t deviceSupportedExtensionsCount = 0;
+    std::vector<const char*> deviceExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+
+    result = vkEnumerateDeviceExtensionProperties(
+        physicalDevice, nullptr, &deviceSupportedExtensionsCount, nullptr);
+    LogVulkanError("error getting available device extension count", result);
+
+    std::vector<VkExtensionProperties> deviceSupportedExtensions(
+        static_cast<size_t>(deviceSupportedExtensionsCount));
+    result = vkEnumerateDeviceExtensionProperties(
+        physicalDevice, nullptr, &deviceSupportedExtensionsCount,
+        deviceSupportedExtensions.data());
+    LogVulkanError("error getting available device extensions", result);
+
+    LogDebug("Physical Device Supported Extensions:");
+    for (const auto properties : deviceSupportedExtensions)
+    {
+        LogDebug(fmt::format("\t{}", properties.extensionName));
+    }
+
+    for (const auto& extension : deviceSupportedExtensions)
+    {
+        // https://vulkan.lunarg.com/doc/view/1.3.250.1/mac/1.3-extensions/vkspec.html#VUID-VkDeviceCreateInfo-pProperties-04451
+        if (!strcmp(
+                extension.extensionName,
+                VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME))
+        {
+            deviceExtensions.push_back(
+                VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+        }
+    }
+
+    return deviceExtensions;
 }

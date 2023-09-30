@@ -46,68 +46,6 @@ int main(int argc, char** argv)
     VkResult result;
     bool running = true;
 
-    std::vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos(
-        static_cast<size_t>(queueFamilyPropertyCount));
-    const float priority = 1.0f;
-
-    LogDebug("Queues:");
-    for (uint32_t i = 0; i < queueFamilyPropertyCount; i++)
-    {
-        const VkQueueFamilyProperties& properties = queueFamilyProperties.at(i);
-
-        VkBool32 supported;
-        result = vkGetPhysicalDeviceSurfaceSupportKHR(
-            physicalDevice, i, surface, &supported);
-        LogVulkanError(
-            fmt::format(
-                "Failed to check whether queue {} supports presentation", i),
-            result);
-
-        LogDebug(fmt::format(
-            "\tQueue Family [{}]: {:#b} {} {}", i, properties.queueFlags,
-            properties.queueCount, static_cast<bool>(supported)));
-
-        VkDeviceQueueCreateInfo deviceQueueCreateInfo = {
-            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-            .queueFamilyIndex = i,
-            .queueCount = 1,
-            .pQueuePriorities = &priority};
-        deviceQueueCreateInfos.at(i) = (deviceQueueCreateInfo);
-    }
-
-    uint32_t deviceSupportedExtensionsCount = 0;
-    result = vkEnumerateDeviceExtensionProperties(
-        physicalDevice, nullptr, &deviceSupportedExtensionsCount, nullptr);
-    LogVulkanError("error getting available device extension count", result);
-
-    std::vector<VkExtensionProperties> deviceSupportedExtensions(
-        static_cast<size_t>(deviceSupportedExtensionsCount));
-    result = vkEnumerateDeviceExtensionProperties(
-        physicalDevice, nullptr, &deviceSupportedExtensionsCount,
-        deviceSupportedExtensions.data());
-    LogVulkanError("error getting available device extensions", result);
-
-    LogDebug("Physical Device Supported Extensions:");
-    for (const auto properties : deviceSupportedExtensions)
-    {
-        LogDebug(fmt::format("\t{}", properties.extensionName));
-    }
-
-    std::vector<const char*> deviceExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME};
-
-    for (const auto& extension : deviceSupportedExtensions)
-    {
-        // https://vulkan.lunarg.com/doc/view/1.3.250.1/mac/1.3-extensions/vkspec.html#VUID-VkDeviceCreateInfo-pProperties-04451
-        if (!strcmp(
-                extension.extensionName,
-                VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME))
-        {
-            deviceExtensions.push_back(
-                VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
-        }
-    }
-
     uint32_t surfaceFormatCount = 0;
     result = vkGetPhysicalDeviceSurfaceFormatsKHR(
         physicalDevice, surface, &surfaceFormatCount, nullptr);
@@ -125,7 +63,6 @@ int main(int argc, char** argv)
         LogDebug(fmt::format(
             "\t{}, {}", surfaceFormat.colorSpace, surfaceFormat.format));
     }
-
     VkSurfaceCapabilitiesKHR surfaceCapabilities;
     result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
         physicalDevice, surface, &surfaceCapabilities);

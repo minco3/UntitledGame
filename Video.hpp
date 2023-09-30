@@ -18,6 +18,8 @@ private:
     std::vector<VkExtensionProperties> GetInstanceSupportedExtensions();
     std::vector<VkPhysicalDevice> GetPhysicalDevices();
     std::vector<VkDeviceQueueCreateInfo> GetDeviceQueueCreateInfos(VkPhysicalDevice device);
+    std::vector<const char*>GetDeviceExtentionNames(VkPhysicalDevice device);
+    bool CheckDeviceSupportsPresentation(VkPhysicalDevice device);
 
     std::vector<DeviceQueue> m_DeviceQueues;
     VkInstance m_Instance;
