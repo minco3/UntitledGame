@@ -1,5 +1,6 @@
 #pragma once
 
+#include "DeviceQueue.hpp"
 #include "Window.hpp"
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -16,9 +17,9 @@ private:
     std::vector<const char*> GetExtensionNames();
     std::vector<VkExtensionProperties> GetInstanceSupportedExtensions();
     std::vector<VkPhysicalDevice> GetPhysicalDevices();
-    std::vector<VkDeviceQueueCreateInfo>
-    GetDeviceQueueCreateInfos(VkPhysicalDevice device);
+    std::vector<VkDeviceQueueCreateInfo> GetDeviceQueueCreateInfos(VkPhysicalDevice device);
 
+    std::vector<DeviceQueue> m_DeviceQueues;
     VkInstance m_Instance;
     Window m_Window;
     VkSurfaceKHR m_Surface;

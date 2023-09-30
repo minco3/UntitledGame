@@ -197,7 +197,8 @@ Video::GetDeviceQueueCreateInfos(VkPhysicalDevice physicalDevice)
 
     std::vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos(
         static_cast<size_t>(queueFamilyPropertyCount));
-    const float priority = 1.0f;
+
+    m_DeviceQueues.resize(queueFamilyPropertyCount, {{std::vector<float>{1.0f}}});
 
     LogDebug("Queues:");
     for (uint32_t i = 0; i < queueFamilyPropertyCount; i++)
@@ -220,7 +221,7 @@ Video::GetDeviceQueueCreateInfos(VkPhysicalDevice physicalDevice)
             .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
             .queueFamilyIndex = i,
             .queueCount = 1,
-            .pQueuePriorities = &priority};
+            .pQueuePriorities = m_DeviceQueues.at(i).m_Priorities.data()};
         deviceQueueCreateInfos.at(i) = (deviceQueueCreateInfo);
     }
     return deviceQueueCreateInfos;
