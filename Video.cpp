@@ -60,11 +60,11 @@ void Video::CreateDevice()
 {
     VkResult result;
     std::vector<VkPhysicalDevice> physicalDevices = GetPhysicalDevices();
-    VkPhysicalDevice physicalDevice = physicalDevices[0];
+    m_PhysicalDevice = physicalDevices[0];
     std::vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos =
-        GetDeviceQueueCreateInfos(physicalDevice);
+        GetDeviceQueueCreateInfos(m_PhysicalDevice);
     std::vector<const char*> deviceExtensions =
-        GetDeviceExtentionNames(physicalDevice);
+        GetDeviceExtentionNames(m_PhysicalDevice);
 
     VkDeviceCreateInfo deviceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -75,8 +75,66 @@ void Video::CreateDevice()
         .ppEnabledExtensionNames = deviceExtensions.data()};
 
     result =
-        vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &m_Device);
+        vkCreateDevice(m_PhysicalDevice, &deviceCreateInfo, nullptr, &m_Device);
     LogVulkanError("Could not create vulkan logical device", result);
+}
+
+void Video::CreateSwapchain()
+{
+    VkResult result;
+    m_SurfaceFormat = GetSurfaceFormat();
+    VkSurfaceCapabilitiesKHR surfaceCapabilities = GetSurfaceCapabilities();
+    VkSwapchainCreateInfoKHR swapchainCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        .surface = m_Surface,
+        .minImageCount = surfaceCapabilities.minImageCount + 1,
+        .imageFormat = m_SurfaceFormat.format,
+        .imageColorSpace = m_SurfaceFormat.colorSpace,
+        .imageExtent = surfaceCapabilities.currentExtent,
+        .imageArrayLayers = 1,
+        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                      VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
+        .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        .presentMode = VK_PRESENT_MODE_FIFO_KHR,
+        .clipped = true};
+
+    VkSwapchainKHR swapchain;
+    result = vkCreateSwapchainKHR(
+        m_Device, &swapchainCreateInfo, nullptr, &swapchain);
+    LogVulkanError("Failed to create swapchain", result);
+}
+
+void Video::CreateSwapchainImageViews()
+{
+    VkResult result;
+    std::vector<VkImage> swapchainImages = GetSwapchainImages();
+    std::vector<VkImageView> swapchainImageViews(swapchainImages.size());
+    for (size_t i = 0; i < swapchainImageViews.size(); i++)
+    {
+        VkImageView& swapchainImageView = swapchainImageViews.at(i);
+        VkImageViewCreateInfo swapchainImageViewCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = swapchainImages.at(i),
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .format = m_SurfaceFormat.format,
+            .components =
+                {.r = VK_COMPONENT_SWIZZLE_IDENTITY,
+                 .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+                 .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+                 .a = VK_COMPONENT_SWIZZLE_IDENTITY},
+            .subresourceRange = {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1}};
+        result = vkCreateImageView(
+            m_Device, &swapchainImageViewCreateInfo, nullptr,
+            &swapchainImageView);
+        LogVulkanError("Failed to create swapchain image view", result);
+    }
 }
 
 std::vector<const char*> Video::GetExtensionNames()
@@ -269,4 +327,97 @@ Video::GetDeviceExtentionNames(VkPhysicalDevice physicalDevice)
     }
 
     return deviceExtensions;
+}
+
+VkSurfaceCapabilitiesKHR Video::GetSurfaceCapabilities()
+{
+    VkResult result;
+    VkSurfaceCapabilitiesKHR surfaceCapabilities;
+
+    result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+        m_PhysicalDevice, m_Surface, &surfaceCapabilities);
+
+    LogDebug(fmt::format(
+        "Surface capabiltiies:\t{}", surfaceCapabilities.currentExtent));
+    return surfaceCapabilities;
+}
+
+VkSurfaceFormatKHR Video::GetSurfaceFormat()
+{
+    return PickSurfaceFormat(
+        GetCompatableSurfaceFormats(), VK_FORMAT_R8G8B8A8_UNORM);
+}
+
+const std::vector<VkSurfaceFormatKHR> Video::GetCompatableSurfaceFormats()
+{
+    VkResult result;
+    uint32_t surfaceFormatCount = 0;
+    result = vkGetPhysicalDeviceSurfaceFormatsKHR(
+        m_PhysicalDevice, m_Surface, &surfaceFormatCount, nullptr);
+    LogVulkanError("Failed to get supported surface format count", result);
+    std::vector<VkSurfaceFormatKHR> surfaceFormats(
+        static_cast<size_t>(surfaceFormatCount));
+    result = vkGetPhysicalDeviceSurfaceFormatsKHR(
+        m_PhysicalDevice, m_Surface, &surfaceFormatCount,
+        surfaceFormats.data());
+    LogVulkanError(
+        "Failed to get surface formats supported by the device", result);
+
+    LogDebug("Supported Formats:");
+    for (const auto& surfaceFormat : surfaceFormats)
+    {
+        LogDebug(fmt::format(
+            "\t{}, {}", surfaceFormat.colorSpace, surfaceFormat.format));
+    }
+    return surfaceFormats;
+}
+
+VkSurfaceFormatKHR Video::PickSurfaceFormat(
+    const std::vector<VkSurfaceFormatKHR>& surfaceFormats,
+    const VkFormat requestedFormat)
+{
+    VkSurfaceFormatKHR surfaceFormat = {
+        .format = VK_FORMAT_UNDEFINED,
+        .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
+    if (surfaceFormats.size() == 1 &&
+        surfaceFormats.at(0).format == VK_FORMAT_UNDEFINED)
+    {
+        surfaceFormat = {
+            .format = VK_FORMAT_R8G8B8A8_UNORM,
+            .colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR};
+    }
+    else if (
+        std::find_if(
+            surfaceFormats.begin(), surfaceFormats.end(),
+            [requestedFormat](VkSurfaceFormatKHR surfaceFormat) {
+                return surfaceFormat.format == requestedFormat;
+            }) != surfaceFormats.end())
+    {
+        surfaceFormat.format = requestedFormat;
+    }
+
+    // fallback
+    if (surfaceFormat.format == VK_FORMAT_UNDEFINED)
+    {
+        surfaceFormat = surfaceFormats.at(0);
+        LogWarning(fmt::format(
+            "Requested format not found! Falling back to: {} {}",
+            surfaceFormat.format, surfaceFormat.colorSpace));
+    }
+    return surfaceFormat;
+}
+
+std::vector<VkImage> Video::GetSwapchainImages()
+{
+    VkResult result;
+    uint32_t swapchainImageCount = 0;
+    result = vkGetSwapchainImagesKHR(
+        m_Device, m_Swapchain, &swapchainImageCount, nullptr);
+    LogVulkanError("Failed to get swapchain image count", result);
+    std::vector<VkImage> swapchainImages(
+        static_cast<size_t>(swapchainImageCount));
+    result = vkGetSwapchainImagesKHR(
+        m_Device, m_Swapchain, &swapchainImageCount, swapchainImages.data());
+    LogVulkanError("Failed to get swapchain images", result);
+    return swapchainImages;
 }
