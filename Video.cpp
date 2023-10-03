@@ -1,11 +1,13 @@
 #include "Video.hpp"
 #include "Log.hpp"
+#include "Vertex.hpp"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_video.h>
 #include <SDL2/SDL_vulkan.h>
-#include <algorithm>
 #include <fmt/format.h>
 #include <vulkan/vulkan_beta.h>
+#include <algorithm>
+#include <array>
 
 Video::Video()
     : m_Window(
@@ -160,7 +162,198 @@ void Video::LoadShaders()
         result = vkCreateShaderModule(
             m_Device, &vertShaderCreateInfo, nullptr, &shader.shaderModule);
         LogVulkanError(
-            fmt::format("failed to create shader {}", shader.filePath), result);
+            fmt::format("failed to create shader module {}", shader.filePath),
+            result);
+    }
+}
+
+// ugly ugly ugly
+std::vector<VkPipelineShaderStageCreateInfo> Video::CreatePipelineShaderStage()
+{
+    VkPipelineShaderStageCreateInfo vertShaderStageCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = VK_SHADER_STAGE_VERTEX_BIT,
+        .module = m_ShaderModules.at(0).shaderModule,
+        .pName = "main"};
+
+    VkPipelineShaderStageCreateInfo fragShaderStageCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+        .module = m_ShaderModules.at(1).shaderModule,
+        .pName = "main"};
+
+    std::vector<VkPipelineShaderStageCreateInfo> shaderStages = {
+        vertShaderStageCreateInfo, fragShaderStageCreateInfo};
+}
+
+void Video::CreateRenderPass()
+{
+    VkResult result;
+    VkAttachmentDescription colorAttachment = {
+        .format = m_SurfaceFormat.format,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR};
+    VkAttachmentReference colorAttachmentRef = {
+        .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+    VkSubpassDescription subpass = {
+        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &colorAttachmentRef,
+    };
+    VkRenderPassCreateInfo renderPassCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+        .attachmentCount = 1,
+        .pAttachments = &colorAttachment,
+        .subpassCount = 1,
+        .pSubpasses = &subpass};
+    result = vkCreateRenderPass(
+        m_Device, &renderPassCreateInfo, nullptr, &m_RenderPass);
+    LogVulkanError("failed to create render pass", result);
+}
+
+void Video::CreateGraphicsPipeline()
+{
+    VkResult result;
+    LoadShaders();
+    std::vector<VkPipelineShaderStageCreateInfo> shaderStages =
+        CreatePipelineShaderStage();
+
+    VkVertexInputBindingDescription bindingDescription{
+        .binding = 0,
+        .stride = sizeof(Vertex),
+        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX};
+
+    std::array<VkVertexInputAttributeDescription, 2> attributeDescription = {
+        {{.location = 0,
+          .binding = 0,
+          .format = VK_FORMAT_R32G32_SFLOAT,
+          .offset = offsetof(Vertex, pos)},
+         {.location = 1,
+          .binding = 0,
+          .format = VK_FORMAT_R32G32B32_SFLOAT,
+          .offset = offsetof(Vertex, color)}}};
+
+    VkPipelineVertexInputStateCreateInfo vertexInputState = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+        .vertexBindingDescriptionCount = 1,
+        .pVertexBindingDescriptions = &bindingDescription,
+        .vertexAttributeDescriptionCount =
+            static_cast<uint32_t>(attributeDescription.size()),
+        .pVertexAttributeDescriptions = attributeDescription.data()};
+
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        .primitiveRestartEnable = VK_FALSE};
+
+    VkViewport viewport = {
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = static_cast<float>(m_SurfaceCapabilities.currentExtent.width),
+        .height = static_cast<float>(m_SurfaceCapabilities.currentExtent.height),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f};
+
+    VkRect2D scissor = {
+        .offset = {0, 0}, .extent = m_SurfaceCapabilities.currentExtent};
+
+    VkPipelineViewportStateCreateInfo viewportState = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+        .viewportCount = 1,
+        .pViewports = &viewport,
+        .scissorCount = 1,
+        .pScissors = &scissor};
+
+    VkPipelineRasterizationStateCreateInfo rasterizationState = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        .depthClampEnable = VK_FALSE,
+        .rasterizerDiscardEnable = VK_FALSE,
+        .polygonMode = VK_POLYGON_MODE_FILL,
+        .cullMode = VK_CULL_MODE_BACK_BIT,
+        .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+        .depthBiasEnable = VK_FALSE,
+        .lineWidth = 1.0f,
+    };
+
+    VkPipelineMultisampleStateCreateInfo multisampleState = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+        .sampleShadingEnable = VK_FALSE};
+
+    VkStencilOpState frontStencil{};
+    VkStencilOpState backStencil{};
+
+    VkPipelineDepthStencilStateCreateInfo depthStencilState = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+        .depthTestEnable = VK_FALSE,
+        .depthWriteEnable =
+            VK_FALSE, // always false when depthTestEnable is false
+        .depthCompareOp = VK_COMPARE_OP_LESS,
+        .stencilTestEnable = VK_FALSE,
+        .front = frontStencil,
+        .back = backStencil,
+        .minDepthBounds = 0.0f,
+        .maxDepthBounds = 100.0f};
+
+    VkPipelineColorBlendAttachmentState colorBlendAttachmentState = {
+        .blendEnable = VK_FALSE,
+        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                          VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+    };
+    VkPipelineColorBlendStateCreateInfo colorBlendState = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+        .logicOpEnable = VK_FALSE,
+        .attachmentCount = 1,
+        .pAttachments = &colorBlendAttachmentState};
+
+    VkPipelineLayout pipelineLayout = CreatePipelineLayout();
+
+    VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .stageCount = static_cast<uint32_t>(shaderStages.size()),
+        .pStages = shaderStages.data(),
+        .pVertexInputState = &vertexInputState,
+        .pInputAssemblyState = &inputAssemblyState,
+        .pViewportState = &viewportState,
+        .pRasterizationState = &rasterizationState,
+        .pMultisampleState = &multisampleState,
+        .pDepthStencilState = &depthStencilState,
+        .pColorBlendState = &colorBlendState,
+        .layout = pipelineLayout,
+        .renderPass = m_RenderPass,
+        .subpass = 0};
+
+    VkPipeline pipeline;
+    result = vkCreateGraphicsPipelines(
+        m_Device, VK_NULL_HANDLE, 1, &graphicsPipelineCreateInfo, nullptr,
+        &pipeline);
+    LogVulkanError("failed to create graphics pipeline", result);
+}
+
+void Video::CreateFramebuffers()
+{
+    VkResult result;
+    m_Framebuffers.resize(m_SwapchainImageViews.size());
+    for (size_t i = 0; i < m_SwapchainImageViews.size(); i++)
+    {
+        VkFramebuffer& framebuffer = m_Framebuffers.at(i);
+        VkFramebufferCreateInfo framebufferCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+            .renderPass = m_RenderPass,
+            .attachmentCount = 1,
+            .pAttachments = &m_SwapchainImageViews.at(i),
+            .width = m_SurfaceCapabilities.currentExtent.width,
+            .height = m_SurfaceCapabilities.currentExtent.height,
+            .layers = 1};
+
+        result = vkCreateFramebuffer(
+            m_Device, &framebufferCreateInfo, nullptr, &framebuffer);
+        LogVulkanError(fmt::format("failed to create framebuffer {}", i), result);
     }
 }
 
@@ -447,4 +640,17 @@ std::vector<VkImage> Video::GetSwapchainImages()
         m_Device, m_Swapchain, &swapchainImageCount, swapchainImages.data());
     LogVulkanError("Failed to get swapchain images", result);
     return swapchainImages;
+}
+
+VkPipelineLayout Video::CreatePipelineLayout()
+{
+    VkResult result;
+    VkPipelineLayout pipelineLayout;
+    VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+    };
+    result = vkCreatePipelineLayout(
+        m_Device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout);
+    LogVulkanError("failed to create pipeline layout", result);
+    return pipelineLayout;
 }
