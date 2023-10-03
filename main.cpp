@@ -46,46 +46,6 @@ int main(int argc, char** argv)
     VkResult result;
     bool running = true;
 
-    enum class ShaderType
-    {
-        Vertex,
-        Fragment
-    };
-
-    struct Shader
-    {
-        ShaderType type;
-        std::string filePath;
-        VkShaderModule shaderModule;
-    };
-
-    std::array<Shader, 2> shaders = {
-        {{ShaderType::Vertex, "shader.vert.spv"},
-         {ShaderType::Fragment, "shader.frag.spv"}}};
-
-    for (Shader& shader : shaders)
-    {
-        std::ifstream shaderCodeFile(shader.filePath, std::ios::binary);
-        if (!shaderCodeFile.is_open())
-        {
-            LogWarning(fmt::format(
-                "Requested shader file {} missing!", shader.filePath));
-        }
-        std::string shaderCode(
-            (std::istreambuf_iterator<char>(shaderCodeFile)),
-            std::istreambuf_iterator<char>());
-
-        VkShaderModuleCreateInfo vertShaderCreateInfo = {
-            .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-            .codeSize = shaderCode.size(),
-            .pCode = reinterpret_cast<const uint32_t*>(shaderCode.data())};
-
-        result = vkCreateShaderModule(
-            device, &vertShaderCreateInfo, nullptr, &shader.shaderModule);
-        LogVulkanError(
-            fmt::format("failed to create shader {}", shader.filePath), result);
-    }
-
     VkPipelineShaderStageCreateInfo vertShaderStageCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = VK_SHADER_STAGE_VERTEX_BIT,

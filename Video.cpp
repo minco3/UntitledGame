@@ -137,6 +137,33 @@ void Video::CreateSwapchainImageViews()
     }
 }
 
+void Video::LoadShaders()
+{
+    VkResult result;
+    for (Shader& shader : m_ShaderModules)
+    {
+        std::ifstream shaderCodeFile(shader.filePath, std::ios::binary);
+        if (!shaderCodeFile.is_open())
+        {
+            LogWarning(fmt::format(
+                "Requested shader file {} missing!", shader.filePath));
+        }
+        std::string shaderCode(
+            (std::istreambuf_iterator<char>(shaderCodeFile)),
+            std::istreambuf_iterator<char>());
+
+        VkShaderModuleCreateInfo vertShaderCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            .codeSize = shaderCode.size(),
+            .pCode = reinterpret_cast<const uint32_t*>(shaderCode.data())};
+
+        result = vkCreateShaderModule(
+            m_Device, &vertShaderCreateInfo, nullptr, &shader.shaderModule);
+        LogVulkanError(
+            fmt::format("failed to create shader {}", shader.filePath), result);
+    }
+}
+
 std::vector<const char*> Video::GetExtensionNames()
 {
     std::vector<const char*> extNames = {
