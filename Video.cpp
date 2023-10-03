@@ -568,8 +568,8 @@ std::vector<const char*> Video::GetExtensionNames()
             instanceSupportedExtensions.end(),
             [](VkExtensionProperties& properties)
             {
-                return properties.extensionName ==
-                       VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
+                return !strcmp(properties.extensionName,
+                       VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
             }) != instanceSupportedExtensions.end())
     {
         extNames.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
