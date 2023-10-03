@@ -1,4 +1,6 @@
-#include <string.h>
+#pragma once
+
+#include <string>
 #include <vulkan/vulkan_core.h>
 
 enum class ShaderType

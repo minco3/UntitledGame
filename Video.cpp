@@ -5,8 +5,8 @@
 #include <SDL2/SDL_video.h>
 #include <SDL2/SDL_vulkan.h>
 #include <algorithm>
-#include <array>
 #include <fmt/format.h>
+#include <span>
 #include <vulkan/vulkan_beta.h>
 
 Video::Video()
@@ -15,6 +15,18 @@ Video::Video()
           {1200, 800}, SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN)
 {
     CreateInstance();
+    m_Surface = m_Window.CreateSDLSurface(m_Instance);
+    CreateDevice();
+    m_SurfaceCapabilities = GetSurfaceCapabilities();
+    CreateSwapchain();
+    CreateSwapchainImageViews();
+    CreatePipelineLayout();
+    CreateRenderPass();
+    CreateGraphicsPipeline();
+    CreateFramebuffers();
+    CreateCommandBuffer();
+    CreateVertexBuffer();
+    CreateMemoryBarriers();
 }
 Video::~Video() { vkDestroyInstance(m_Instance, nullptr); }
 
@@ -26,8 +38,8 @@ void Video::Render()
     vkResetFences(m_Device, 1, &m_Fence);
     uint32_t imageIndex = 0;
     result = vkAcquireNextImageKHR(
-        m_Device, m_Swapchain, std::numeric_limits<uint64_t>::max(), m_Semaphore,
-        VK_NULL_HANDLE, &imageIndex);
+        m_Device, m_Swapchain, std::numeric_limits<uint64_t>::max(),
+        m_Semaphore, VK_NULL_HANDLE, &imageIndex);
     LogVulkanError("failed to aquire next image", result);
 
     vkResetCommandBuffer(m_CommandBuffer, 0);
@@ -54,7 +66,8 @@ void Video::Render()
     vkCmdBeginRenderPass(
         m_CommandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
+    vkCmdBindPipeline(
+        m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
 
     VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(m_CommandBuffer, 0, 1, &m_VertexBuffer, &offset);
@@ -65,6 +78,8 @@ void Video::Render()
 
     result = vkEndCommandBuffer(m_CommandBuffer);
     LogVulkanError("failed to stop recording command buffer", result);
+
+    m_Queue = GetQueue(m_QueueFamilyIndex, 0);
 
     VkPipelineStageFlags waitFlags =
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -95,8 +110,6 @@ void Video::CreateInstance()
 {
     VkResult result;
 
-    VkInstanceCreateFlags instanceCreateFlags = {};
-
     VkApplicationInfo applicationInfo = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pApplicationName = "Untitled Game",
@@ -108,15 +121,8 @@ void Video::CreateInstance()
 
     std::vector<const char*> extNames = GetExtensionNames();
 
-    if (std::find_if(
-            extNames.begin(), extNames.end(),
-            [](const char* extName) {
-                return !strcmp(
-                    extName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-            }) != extNames.end())
-    {
-        instanceCreateFlags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-    }
+    VkInstanceCreateFlags instanceCreateFlags =
+        GetInstanceCreateFlags(extNames);
 
     VkInstanceCreateInfo instanceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
@@ -158,14 +164,13 @@ void Video::CreateSwapchain()
 {
     VkResult result;
     m_SurfaceFormat = GetSurfaceFormat();
-    VkSurfaceCapabilitiesKHR surfaceCapabilities = GetSurfaceCapabilities();
     VkSwapchainCreateInfoKHR swapchainCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = m_Surface,
-        .minImageCount = surfaceCapabilities.minImageCount + 1,
+        .minImageCount = m_SurfaceCapabilities.minImageCount + 1,
         .imageFormat = m_SurfaceFormat.format,
         .imageColorSpace = m_SurfaceFormat.colorSpace,
-        .imageExtent = surfaceCapabilities.currentExtent,
+        .imageExtent = m_SurfaceCapabilities.currentExtent,
         .imageArrayLayers = 1,
         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
                       VK_IMAGE_USAGE_TRANSFER_DST_BIT,
@@ -184,10 +189,10 @@ void Video::CreateSwapchainImageViews()
 {
     VkResult result;
     std::vector<VkImage> swapchainImages = GetSwapchainImages();
-    std::vector<VkImageView> swapchainImageViews(swapchainImages.size());
-    for (size_t i = 0; i < swapchainImageViews.size(); i++)
+    m_SwapchainImageViews.resize(swapchainImages.size());
+    for (size_t i = 0; i < swapchainImages.size(); i++)
     {
-        VkImageView& swapchainImageView = swapchainImageViews.at(i);
+        VkImageView& swapchainImageView = m_SwapchainImageViews.at(i);
         VkImageViewCreateInfo swapchainImageViewCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = swapchainImages.at(i),
@@ -256,6 +261,8 @@ std::vector<VkPipelineShaderStageCreateInfo> Video::CreatePipelineShaderStage()
 
     std::vector<VkPipelineShaderStageCreateInfo> shaderStages = {
         vertShaderStageCreateInfo, fragShaderStageCreateInfo};
+
+    return shaderStages;
 }
 
 void Video::CreateRenderPass()
@@ -410,6 +417,7 @@ void Video::CreateGraphicsPipeline()
 void Video::CreateFramebuffers()
 {
     VkResult result;
+    assert(m_SwapchainImageViews.size()>0);
     m_Framebuffers.resize(m_SwapchainImageViews.size());
     for (size_t i = 0; i < m_SwapchainImageViews.size(); i++)
     {
@@ -442,14 +450,13 @@ void Video::CreateCommandBuffer()
         m_Device, &commandPoolCreateInfo, nullptr, &commandPool);
     LogVulkanError("failed to create command pool", result);
 
-    VkCommandBuffer commandBuffer;
     VkCommandBufferAllocateInfo commandBuffersAllocateInfo{
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .commandPool = commandPool,
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .commandBufferCount = 1};
     result = vkAllocateCommandBuffers(
-        m_Device, &commandBuffersAllocateInfo, &commandBuffer);
+        m_Device, &commandBuffersAllocateInfo, &m_CommandBuffer);
     LogVulkanError("failed to allocate command buffers", result);
 }
 
@@ -514,11 +521,14 @@ void Video::CreateVertexBuffer()
         m_Device, &memoryAllocateInfo, nullptr, &vertexBufferMemory);
     LogVulkanError("failed to allocate vertex buffer memory", result);
 
+    // load hard-coded vertices into memory
     vkBindBufferMemory(m_Device, m_VertexBuffer, vertexBufferMemory, 0);
     void* data;
     vkMapMemory(
         m_Device, vertexBufferMemory, 0, bufferCreateInfo.size, 0, &data);
-    std::copy_n(vertices.begin(), vertices.size(), data);
+    std::span<Vertex> memorySpan(
+        reinterpret_cast<Vertex*>(data), vertices.size());
+    std::copy_n(vertices.begin(), vertices.size(), memorySpan.begin());
     vkUnmapMemory(m_Device, vertexBufferMemory);
 }
 
@@ -748,7 +758,7 @@ VkSurfaceCapabilitiesKHR Video::GetSurfaceCapabilities()
 VkSurfaceFormatKHR Video::GetSurfaceFormat()
 {
     return PickSurfaceFormat(
-        GetCompatableSurfaceFormats(), VK_FORMAT_R8G8B8A8_UNORM);
+        GetCompatableSurfaceFormats(), VK_FORMAT_B8G8R8A8_UNORM);
 }
 
 const std::vector<VkSurfaceFormatKHR> Video::GetCompatableSurfaceFormats()
@@ -843,4 +853,21 @@ VkQueue Video::GetQueue(uint32_t queueFamily, uint32_t index)
     VkQueue queue;
     vkGetDeviceQueue(m_Device, index, 0, &queue);
     return queue;
+}
+
+VkInstanceCreateFlags
+Video::GetInstanceCreateFlags(const std::vector<const char*>& extentionNames)
+{
+    VkInstanceCreateFlags instanceCreateFlags = {};
+    if (std::find_if(
+            extentionNames.begin(), extentionNames.end(),
+            [](const char* extName) {
+                return !strcmp(
+                    extName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+            }) != extentionNames.end())
+    {
+        instanceCreateFlags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+    }
+
+    return instanceCreateFlags;
 }

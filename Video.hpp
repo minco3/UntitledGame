@@ -4,6 +4,7 @@
 #include "Shader.hpp"
 #include "Window.hpp"
 #include <vector>
+#include <array>
 #include <vulkan/vulkan.h>
 
 class Video
@@ -44,6 +45,7 @@ private:
     std::vector<VkImage> GetSwapchainImages();
     VkPipelineLayout CreatePipelineLayout();
     VkQueue GetQueue(uint32_t queueFamily, uint32_t index);
+    VkInstanceCreateFlags GetInstanceCreateFlags(const std::vector<const char *>& extentionNames);
 
     std::vector<DeviceQueue> m_DeviceQueues;
     VkInstance m_Instance;

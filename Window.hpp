@@ -1,5 +1,8 @@
+#pragma once
+
 #include <SDL2/SDL_video.h>
 #include <glm/vec2.hpp>
+#include <vulkan/vulkan_core.h>
 #include <vector>
 
 class Window
