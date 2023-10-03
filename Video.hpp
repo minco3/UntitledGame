@@ -12,16 +12,22 @@ public:
     Video();
     ~Video();
 
+    void Render();
+
 private:
     void CreateInstance();
     void CreateDevice();
     void CreateSwapchain();
     void CreateSwapchainImageViews();
     void LoadShaders();
-    std::vector<VkPipelineShaderStageCreateInfo> CreatePipelineShaderStage();
     void CreateRenderPass();
     void CreateGraphicsPipeline();
     void CreateFramebuffers();
+    void CreateCommandBuffer();
+    void CreateVertexBuffer();
+    void CreateMemoryBarriers();
+
+    std::vector<VkPipelineShaderStageCreateInfo> CreatePipelineShaderStage();
     std::vector<const char*> GetExtensionNames();
     std::vector<VkExtensionProperties> GetInstanceSupportedExtensions();
     std::vector<VkPhysicalDevice> GetPhysicalDevices();
@@ -37,6 +43,7 @@ private:
         const VkFormat requestedFormat);
     std::vector<VkImage> GetSwapchainImages();
     VkPipelineLayout CreatePipelineLayout();
+    VkQueue GetQueue(uint32_t queueFamily, uint32_t index);
 
     std::vector<DeviceQueue> m_DeviceQueues;
     VkInstance m_Instance;
@@ -53,4 +60,12 @@ private:
         {{ShaderType::Vertex, "shader.vert.spv"},
          {ShaderType::Fragment, "shader.frag.spv"}}};
     VkRenderPass m_RenderPass;
+    VkCommandBuffer m_CommandBuffer;
+    VkBuffer m_VertexBuffer;
+    uint32_t m_QueueFamilyIndex = 0;
+    VkQueue m_Queue;
+    VkPipeline m_Pipeline;
+    VkSemaphore m_Semaphore;
+    VkSemaphore m_RenderSemaphore;
+    VkFence m_Fence;
 };

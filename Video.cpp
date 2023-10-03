@@ -4,10 +4,10 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_video.h>
 #include <SDL2/SDL_vulkan.h>
-#include <fmt/format.h>
-#include <vulkan/vulkan_beta.h>
 #include <algorithm>
 #include <array>
+#include <fmt/format.h>
+#include <vulkan/vulkan_beta.h>
 
 Video::Video()
     : m_Window(
@@ -17,6 +17,79 @@ Video::Video()
     CreateInstance();
 }
 Video::~Video() { vkDestroyInstance(m_Instance, nullptr); }
+
+void Video::Render()
+{
+    VkResult result;
+    vkWaitForFences(
+        m_Device, 1, &m_Fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+    vkResetFences(m_Device, 1, &m_Fence);
+    uint32_t imageIndex = 0;
+    result = vkAcquireNextImageKHR(
+        m_Device, m_Swapchain, std::numeric_limits<uint64_t>::max(), m_Semaphore,
+        VK_NULL_HANDLE, &imageIndex);
+    LogVulkanError("failed to aquire next image", result);
+
+    vkResetCommandBuffer(m_CommandBuffer, 0);
+
+    VkClearColorValue clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
+    VkClearValue clearValue = {.color = clearColor};
+
+    VkRenderPassBeginInfo renderPassBeginInfo = {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+        .renderPass = m_RenderPass,
+        .framebuffer = m_Framebuffers.at(imageIndex),
+        .renderArea =
+            {.offset = {0, 0}, .extent = m_SurfaceCapabilities.currentExtent},
+        .clearValueCount = 1,
+        .pClearValues = &clearValue};
+
+    VkCommandBufferBeginInfo commandBufferBeginInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT};
+
+    result = vkBeginCommandBuffer(m_CommandBuffer, &commandBufferBeginInfo);
+    LogVulkanError("failed to start recording command buffer", result);
+
+    vkCmdBeginRenderPass(
+        m_CommandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    vkCmdBindPipeline(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
+
+    VkDeviceSize offset = 0;
+    vkCmdBindVertexBuffers(m_CommandBuffer, 0, 1, &m_VertexBuffer, &offset);
+
+    vkCmdDraw(m_CommandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+
+    vkCmdEndRenderPass(m_CommandBuffer);
+
+    result = vkEndCommandBuffer(m_CommandBuffer);
+    LogVulkanError("failed to stop recording command buffer", result);
+
+    VkPipelineStageFlags waitFlags =
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkSubmitInfo submitInfo = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &m_Semaphore,
+        .pWaitDstStageMask = &waitFlags,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &m_CommandBuffer,
+        .signalSemaphoreCount = 1,
+        .pSignalSemaphores = &m_RenderSemaphore};
+    result = vkQueueSubmit(m_Queue, 1, &submitInfo, m_Fence);
+    LogVulkanError("failed to submit draw command buffer", result);
+
+    VkPresentInfoKHR presentInfo = {
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &m_RenderSemaphore,
+        .swapchainCount = 1,
+        .pSwapchains = &m_Swapchain,
+        .pImageIndices = &imageIndex};
+    result = vkQueuePresentKHR(m_Queue, &presentInfo);
+    LogVulkanError("failed to present queue", result);
+}
 
 void Video::CreateInstance()
 {
@@ -102,9 +175,8 @@ void Video::CreateSwapchain()
         .presentMode = VK_PRESENT_MODE_FIFO_KHR,
         .clipped = true};
 
-    VkSwapchainKHR swapchain;
     result = vkCreateSwapchainKHR(
-        m_Device, &swapchainCreateInfo, nullptr, &swapchain);
+        m_Device, &swapchainCreateInfo, nullptr, &m_Swapchain);
     LogVulkanError("Failed to create swapchain", result);
 }
 
@@ -255,7 +327,8 @@ void Video::CreateGraphicsPipeline()
         .x = 0.0f,
         .y = 0.0f,
         .width = static_cast<float>(m_SurfaceCapabilities.currentExtent.width),
-        .height = static_cast<float>(m_SurfaceCapabilities.currentExtent.height),
+        .height =
+            static_cast<float>(m_SurfaceCapabilities.currentExtent.height),
         .minDepth = 0.0f,
         .maxDepth = 1.0f};
 
@@ -328,10 +401,9 @@ void Video::CreateGraphicsPipeline()
         .renderPass = m_RenderPass,
         .subpass = 0};
 
-    VkPipeline pipeline;
     result = vkCreateGraphicsPipelines(
         m_Device, VK_NULL_HANDLE, 1, &graphicsPipelineCreateInfo, nullptr,
-        &pipeline);
+        &m_Pipeline);
     LogVulkanError("failed to create graphics pipeline", result);
 }
 
@@ -353,8 +425,119 @@ void Video::CreateFramebuffers()
 
         result = vkCreateFramebuffer(
             m_Device, &framebufferCreateInfo, nullptr, &framebuffer);
-        LogVulkanError(fmt::format("failed to create framebuffer {}", i), result);
+        LogVulkanError(
+            fmt::format("failed to create framebuffer {}", i), result);
     }
+}
+
+void Video::CreateCommandBuffer()
+{
+    VkResult result;
+    VkCommandPool commandPool;
+    VkCommandPoolCreateInfo commandPoolCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        .queueFamilyIndex = m_QueueFamilyIndex};
+    result = vkCreateCommandPool(
+        m_Device, &commandPoolCreateInfo, nullptr, &commandPool);
+    LogVulkanError("failed to create command pool", result);
+
+    VkCommandBuffer commandBuffer;
+    VkCommandBufferAllocateInfo commandBuffersAllocateInfo{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = commandPool,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1};
+    result = vkAllocateCommandBuffers(
+        m_Device, &commandBuffersAllocateInfo, &commandBuffer);
+    LogVulkanError("failed to allocate command buffers", result);
+}
+
+void Video::CreateVertexBuffer()
+{
+    VkResult result;
+
+    VkBufferCreateInfo bufferCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = vertices.size() * sizeof(Vertex),
+        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE};
+    result =
+        vkCreateBuffer(m_Device, &bufferCreateInfo, nullptr, &m_VertexBuffer);
+    LogVulkanError("failed to create vertex buffer", result);
+
+    VkMemoryRequirements memoryRequirements;
+    vkGetBufferMemoryRequirements(
+        m_Device, m_VertexBuffer, &memoryRequirements);
+
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+    vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &memoryProperties);
+
+    VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    uint32_t memoryTypeIndex;
+
+    LogDebug(
+        fmt::format("TypeFilter: {:#b}", memoryRequirements.memoryTypeBits));
+
+    LogDebug(fmt::format("Available Memory Types:"));
+    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
+    {
+        LogDebug(fmt::format(
+            "\t{:#b}", static_cast<uint32_t>(
+                           memoryProperties.memoryTypes[i].propertyFlags)));
+    }
+
+    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
+    {
+        if ((memoryRequirements.memoryTypeBits & (1 << i)) &&
+            (memoryProperties.memoryTypes[i].propertyFlags & properties) ==
+                properties)
+        {
+            memoryTypeIndex = i;
+            break;
+        }
+        if (i == memoryProperties.memoryTypeCount - 1)
+        {
+            LogError("ERROR: failed to find suitable memory type\n");
+        }
+    }
+
+    VkMemoryAllocateInfo memoryAllocateInfo = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memoryRequirements.size,
+        .memoryTypeIndex = memoryTypeIndex};
+
+    VkDeviceMemory vertexBufferMemory;
+
+    result = vkAllocateMemory(
+        m_Device, &memoryAllocateInfo, nullptr, &vertexBufferMemory);
+    LogVulkanError("failed to allocate vertex buffer memory", result);
+
+    vkBindBufferMemory(m_Device, m_VertexBuffer, vertexBufferMemory, 0);
+    void* data;
+    vkMapMemory(
+        m_Device, vertexBufferMemory, 0, bufferCreateInfo.size, 0, &data);
+    std::copy_n(vertices.begin(), vertices.size(), data);
+    vkUnmapMemory(m_Device, vertexBufferMemory);
+}
+
+void Video::CreateMemoryBarriers()
+{
+    VkResult result;
+    VkSemaphoreCreateInfo semaphoreCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+    result = vkCreateSemaphore(
+        m_Device, &semaphoreCreateInfo, nullptr, &m_Semaphore);
+    LogVulkanError("failed to create semaphore", result);
+    result = vkCreateSemaphore(
+        m_Device, &semaphoreCreateInfo, nullptr, &m_RenderSemaphore);
+    LogVulkanError("failed to create semaphore", result);
+    VkFenceCreateInfo fenceCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT};
+    result = vkCreateFence(m_Device, &fenceCreateInfo, nullptr, &m_Fence);
+    LogVulkanError("failed to create fence", result);
 }
 
 std::vector<const char*> Video::GetExtensionNames()
@@ -653,4 +836,11 @@ VkPipelineLayout Video::CreatePipelineLayout()
         m_Device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout);
     LogVulkanError("failed to create pipeline layout", result);
     return pipelineLayout;
+}
+
+VkQueue Video::GetQueue(uint32_t queueFamily, uint32_t index)
+{
+    VkQueue queue;
+    vkGetDeviceQueue(m_Device, index, 0, &queue);
+    return queue;
 }

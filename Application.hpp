@@ -10,4 +10,5 @@ public:
 
 private:
     Video m_Video;
+    bool m_Running;
 };
