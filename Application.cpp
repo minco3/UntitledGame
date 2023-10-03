@@ -3,8 +3,7 @@
 
 Application::Application() : m_Running(true) {}
 
-void Application::Run() {}
-void Application::Update()
+void Application::Run()
 {
     while (m_Running)
     {
@@ -22,5 +21,7 @@ void Application::Update()
                 }
             }
         }
+        m_Video.Render();
     }
 }
+void Application::Update() {}
