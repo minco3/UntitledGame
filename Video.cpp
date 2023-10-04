@@ -527,7 +527,7 @@ void Video::CreateVertexBuffer()
     vkMapMemory(
         m_Device, vertexBufferMemory, 0, bufferCreateInfo.size, 0, &data);
     std::span<Vertex> memorySpan(
-        reinterpret_cast<Vertex*>(data), vertices.size());
+        static_cast<Vertex*>(data), vertices.size());
     std::copy_n(vertices.begin(), vertices.size(), memorySpan.begin());
     vkUnmapMemory(m_Device, vertexBufferMemory);
 }
