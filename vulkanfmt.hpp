@@ -1,4 +1,5 @@
 #pragma once
+
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <vulkan/vk_enum_string_helper.h>
