@@ -19,7 +19,6 @@ private:
     void CreateDevice();
     void CreateSwapchain();
     void CreateSwapchainImageViews();
-    void LoadShaders();
     void CreateRenderPass();
     void CreateGraphicsPipeline();
     void CreateFramebuffers();

@@ -1,8 +1,9 @@
 #pragma once
 
-#include <string>
-#include <vulkan/vulkan_core.h>
 #include "Log.hpp"
+#include <string>
+#include <vector>
+#include <vulkan/vulkan_core.h>
 
 struct Shader
 {
@@ -34,3 +35,5 @@ struct Shader
     VkShaderModule vertShaderModule;
     VkShaderModule fragShaderModule;
 };
+
+std::vector<Shader> LoadShaders(VkDevice device);
