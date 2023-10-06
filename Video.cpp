@@ -28,7 +28,38 @@ Video::Video()
     CreateVertexBuffer();
     CreateMemoryBarriers();
 }
-Video::~Video() { vkDestroyInstance(m_Instance, nullptr); }
+Video::~Video() {
+    VkResult result;
+    result = vkQueueWaitIdle(m_Queue);
+    LogVulkanError("Queue Wait Error", result);
+    result = vkDeviceWaitIdle(m_Device);
+    LogVulkanError("Device Wait Error", result);
+    vkDestroyFence(m_Device, m_Fence, nullptr);
+    vkDestroySemaphore(m_Device, m_Semaphore, nullptr);
+    vkDestroySemaphore(m_Device, m_RenderSemaphore, nullptr);
+    vkDestroyBuffer(m_Device, m_VertexBuffer, nullptr);
+    vkFreeMemory(m_Device, m_VertexBufferMemory, nullptr);
+    for (VkImageView imageView : m_SwapchainImageViews)
+    {
+        vkDestroyImageView(m_Device, imageView, nullptr);
+    }
+    for (Shader shaderModule : m_ShaderModules)
+    {
+        vkDestroyShaderModule(m_Device, shaderModule.shaderModule, nullptr);
+    }
+    vkDestroyPipelineLayout(m_Device, m_PipelineLayout, nullptr);
+    vkDestroyRenderPass(m_Device, m_RenderPass, nullptr);
+    for (VkFramebuffer framebuffer : m_Framebuffers)
+    {
+        vkDestroyFramebuffer(m_Device, framebuffer, nullptr);
+    }
+    vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
+    vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
+    vkDestroyPipeline(m_Device, m_Pipeline, nullptr);
+    vkDestroyDevice(m_Device, nullptr);
+    vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
+    vkDestroyInstance(m_Instance, nullptr);
+}
 
 void Video::Render()
 {
@@ -391,8 +422,6 @@ void Video::CreateGraphicsPipeline()
         .attachmentCount = 1,
         .pAttachments = &colorBlendAttachmentState};
 
-    VkPipelineLayout pipelineLayout = CreatePipelineLayout();
-
     VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .stageCount = static_cast<uint32_t>(shaderStages.size()),
@@ -404,7 +433,7 @@ void Video::CreateGraphicsPipeline()
         .pMultisampleState = &multisampleState,
         .pDepthStencilState = &depthStencilState,
         .pColorBlendState = &colorBlendState,
-        .layout = pipelineLayout,
+        .layout = m_PipelineLayout,
         .renderPass = m_RenderPass,
         .subpass = 0};
 
@@ -441,18 +470,17 @@ void Video::CreateFramebuffers()
 void Video::CreateCommandBuffer()
 {
     VkResult result;
-    VkCommandPool commandPool;
     VkCommandPoolCreateInfo commandPoolCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
         .queueFamilyIndex = m_QueueFamilyIndex};
     result = vkCreateCommandPool(
-        m_Device, &commandPoolCreateInfo, nullptr, &commandPool);
+        m_Device, &commandPoolCreateInfo, nullptr, &m_CommandPool);
     LogVulkanError("failed to create command pool", result);
 
     VkCommandBufferAllocateInfo commandBuffersAllocateInfo{
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = commandPool,
+        .commandPool = m_CommandPool,
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .commandBufferCount = 1};
     result = vkAllocateCommandBuffers(
@@ -515,21 +543,19 @@ void Video::CreateVertexBuffer()
         .allocationSize = memoryRequirements.size,
         .memoryTypeIndex = memoryTypeIndex};
 
-    VkDeviceMemory vertexBufferMemory;
-
     result = vkAllocateMemory(
-        m_Device, &memoryAllocateInfo, nullptr, &vertexBufferMemory);
+        m_Device, &memoryAllocateInfo, nullptr, &m_VertexBufferMemory);
     LogVulkanError("failed to allocate vertex buffer memory", result);
 
     // load hard-coded vertices into memory
-    vkBindBufferMemory(m_Device, m_VertexBuffer, vertexBufferMemory, 0);
+    vkBindBufferMemory(m_Device, m_VertexBuffer, m_VertexBufferMemory, 0);
     void* data;
     vkMapMemory(
-        m_Device, vertexBufferMemory, 0, bufferCreateInfo.size, 0, &data);
+        m_Device, m_VertexBufferMemory, 0, bufferCreateInfo.size, 0, &data);
     std::span<Vertex> memorySpan(
         static_cast<Vertex*>(data), vertices.size());
     std::copy_n(vertices.begin(), vertices.size(), memorySpan.begin());
-    vkUnmapMemory(m_Device, vertexBufferMemory);
+    vkUnmapMemory(m_Device, m_VertexBufferMemory);
 }
 
 void Video::CreateMemoryBarriers()
@@ -835,17 +861,15 @@ std::vector<VkImage> Video::GetSwapchainImages()
     return swapchainImages;
 }
 
-VkPipelineLayout Video::CreatePipelineLayout()
+void Video::CreatePipelineLayout()
 {
     VkResult result;
-    VkPipelineLayout pipelineLayout;
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
     };
     result = vkCreatePipelineLayout(
-        m_Device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout);
+        m_Device, &pipelineLayoutCreateInfo, nullptr, &m_PipelineLayout);
     LogVulkanError("failed to create pipeline layout", result);
-    return pipelineLayout;
 }
 
 VkQueue Video::GetQueue(uint32_t queueFamily, uint32_t index)
