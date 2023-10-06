@@ -27,6 +27,7 @@ private:
     void CreateCommandBuffer();
     void CreateVertexBuffer();
     void CreateMemoryBarriers();
+    void CreatePipelineLayout();
 
     std::vector<VkPipelineShaderStageCreateInfo> CreatePipelineShaderStage();
     std::vector<const char*> GetExtensionNames();
@@ -43,7 +44,6 @@ private:
         const std::vector<VkSurfaceFormatKHR>& surfaceFormats,
         const VkFormat requestedFormat);
     std::vector<VkImage> GetSwapchainImages();
-    VkPipelineLayout CreatePipelineLayout();
     VkQueue GetQueue(uint32_t queueFamily, uint32_t index);
     VkInstanceCreateFlags GetInstanceCreateFlags(const std::vector<const char *>& extentionNames);
 
@@ -62,11 +62,14 @@ private:
         {{ShaderType::Vertex, "shader.vert.spv"},
          {ShaderType::Fragment, "shader.frag.spv"}}};
     VkRenderPass m_RenderPass;
+    VkCommandPool m_CommandPool;
     VkCommandBuffer m_CommandBuffer;
     VkBuffer m_VertexBuffer;
+    VkDeviceMemory m_VertexBufferMemory;
     uint32_t m_QueueFamilyIndex = 0;
     VkQueue m_Queue;
     VkPipeline m_Pipeline;
+    VkPipelineLayout m_PipelineLayout;
     VkSemaphore m_Semaphore;
     VkSemaphore m_RenderSemaphore;
     VkFence m_Fence;
