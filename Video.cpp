@@ -5,6 +5,7 @@
 #include <SDL2/SDL_video.h>
 #include <SDL2/SDL_vulkan.h>
 #include <algorithm>
+#include <filesystem>
 #include <fmt/format.h>
 #include <span>
 #include <vulkan/vulkan_beta.h>
@@ -28,7 +29,8 @@ Video::Video()
     CreateVertexBuffer();
     CreateMemoryBarriers();
 }
-Video::~Video() {
+Video::~Video()
+{
     VkResult result;
     result = vkQueueWaitIdle(m_Queue);
     LogVulkanError("Queue Wait Error", result);
@@ -43,10 +45,6 @@ Video::~Video() {
     {
         vkDestroyImageView(m_Device, imageView, nullptr);
     }
-    for (Shader shaderModule : m_ShaderModules)
-    {
-        vkDestroyShaderModule(m_Device, shaderModule.shaderModule, nullptr);
-    }
     vkDestroyPipelineLayout(m_Device, m_PipelineLayout, nullptr);
     vkDestroyRenderPass(m_Device, m_RenderPass, nullptr);
     for (VkFramebuffer framebuffer : m_Framebuffers)
@@ -54,6 +52,10 @@ Video::~Video() {
         vkDestroyFramebuffer(m_Device, framebuffer, nullptr);
     }
     vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
+    for (Shader& shader : m_Shaders)
+    {
+        shader.DestroyShaderModules();
+    }
     vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
     vkDestroyPipeline(m_Device, m_Pipeline, nullptr);
     vkDestroyDevice(m_Device, nullptr);
@@ -249,29 +251,97 @@ void Video::CreateSwapchainImageViews()
 
 void Video::LoadShaders()
 {
-    VkResult result;
-    for (Shader& shader : m_ShaderModules)
+    std::filesystem::path current_directory =
+        std::filesystem::path(WORKING_DIRECTORY).append("build");
+    for (std::filesystem::directory_entry entry :
+         std::filesystem::directory_iterator(current_directory))
     {
-        std::ifstream shaderCodeFile(shader.filePath, std::ios::binary);
-        if (!shaderCodeFile.is_open())
+        if (entry.path().extension() == ".spv") // a.frag(.spv)
         {
-            LogWarning(fmt::format(
-                "Requested shader file {} missing!", shader.filePath));
+            std::string name =
+                entry.path().stem().stem().string(); // (a).frag.spv
+            // check if shader already exists
+            if (std::find_if(
+                    m_Shaders.begin(), m_Shaders.end(),
+                    [name](const Shader& shader)
+                    { return name == shader.name; }) != m_Shaders.end())
+            {
+                continue;
+            }
+
+            // if it doesnt look for the missing half
+            std::filesystem::path shaderType =
+                entry.path().stem().extension(); // a(.frag).spv
+            std::filesystem::path vertShaderPath = current_directory;
+            vertShaderPath.append(name + ".vert.spv");
+            std::filesystem::path fragShaderPath = current_directory;
+            fragShaderPath.append(name + ".frag.spv");
+            if (shaderType == ".vert")
+            {
+                if (!std::filesystem::exists(
+                        fragShaderPath))
+                {
+                    LogWarning(fmt::format(
+                        "Could not find fragment shader for shader {}", name));
+                    continue;
+                }
+            }
+            else // .frag
+            {
+                if (!std::filesystem::exists(
+                        vertShaderPath))
+                {
+                    LogWarning(fmt::format(
+                        "Could not find vertex shader for shader {}", name));
+                    continue;
+                }
+            }
+
+            std::ifstream vertShaderCodeFile(
+                vertShaderPath, std::ios::binary);
+            if (!vertShaderCodeFile.is_open())
+            {
+                LogWarning(fmt::format(
+                    "Requested vertex shader {} missing!",
+                    vertShaderPath.string()));
+            }
+
+            std::ifstream fragShaderCodeFile(
+                fragShaderPath, std::ios::binary);
+            if (!fragShaderCodeFile.is_open())
+            {
+                LogWarning(fmt::format(
+                    "Requested fragment shader {} missing!",
+                    fragShaderPath.string()));
+            }
+
+            std::string vertShaderCode(
+                (std::istreambuf_iterator<char>(vertShaderCodeFile)),
+                std::istreambuf_iterator<char>());
+
+            std::string fragShaderCode(
+                (std::istreambuf_iterator<char>(fragShaderCodeFile)),
+                std::istreambuf_iterator<char>());
+
+            VkShaderModuleCreateInfo vertShaderCreateInfo = {
+                .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+                .codeSize = vertShaderCode.size(),
+                .pCode =
+                    reinterpret_cast<const uint32_t*>(vertShaderCode.data())};
+
+            VkShaderModuleCreateInfo fragShaderCreateInfo = {
+                .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+                .codeSize = fragShaderCode.size(),
+                .pCode =
+                    reinterpret_cast<const uint32_t*>(fragShaderCode.data())};
+
+            m_Shaders.emplace_back(
+                m_Device, name, vertShaderCreateInfo, fragShaderCreateInfo);
         }
-        std::string shaderCode(
-            (std::istreambuf_iterator<char>(shaderCodeFile)),
-            std::istreambuf_iterator<char>());
-
-        VkShaderModuleCreateInfo vertShaderCreateInfo = {
-            .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-            .codeSize = shaderCode.size(),
-            .pCode = reinterpret_cast<const uint32_t*>(shaderCode.data())};
-
-        result = vkCreateShaderModule(
-            m_Device, &vertShaderCreateInfo, nullptr, &shader.shaderModule);
-        LogVulkanError(
-            fmt::format("failed to create shader module {}", shader.filePath),
-            result);
+    }
+    if (m_Shaders.size() == 0)
+    {
+        LogWarning("No shaders constructed!");
     }
 }
 
@@ -281,13 +351,13 @@ std::vector<VkPipelineShaderStageCreateInfo> Video::CreatePipelineShaderStage()
     VkPipelineShaderStageCreateInfo vertShaderStageCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = VK_SHADER_STAGE_VERTEX_BIT,
-        .module = m_ShaderModules.at(0).shaderModule,
+        .module = m_Shaders.at(0).vertShaderModule,
         .pName = "main"};
 
     VkPipelineShaderStageCreateInfo fragShaderStageCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .module = m_ShaderModules.at(1).shaderModule,
+        .module = m_Shaders.at(0).fragShaderModule,
         .pName = "main"};
 
     std::vector<VkPipelineShaderStageCreateInfo> shaderStages = {
@@ -446,7 +516,7 @@ void Video::CreateGraphicsPipeline()
 void Video::CreateFramebuffers()
 {
     VkResult result;
-    assert(m_SwapchainImageViews.size()>0);
+    assert(m_SwapchainImageViews.size() > 0);
     m_Framebuffers.resize(m_SwapchainImageViews.size());
     for (size_t i = 0; i < m_SwapchainImageViews.size(); i++)
     {
@@ -552,8 +622,7 @@ void Video::CreateVertexBuffer()
     void* data;
     vkMapMemory(
         m_Device, m_VertexBufferMemory, 0, bufferCreateInfo.size, 0, &data);
-    std::span<Vertex> memorySpan(
-        static_cast<Vertex*>(data), vertices.size());
+    std::span<Vertex> memorySpan(static_cast<Vertex*>(data), vertices.size());
     std::copy_n(vertices.begin(), vertices.size(), memorySpan.begin());
     vkUnmapMemory(m_Device, m_VertexBufferMemory);
 }
@@ -594,8 +663,9 @@ std::vector<const char*> Video::GetExtensionNames()
             instanceSupportedExtensions.end(),
             [](VkExtensionProperties& properties)
             {
-                return !strcmp(properties.extensionName,
-                       VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+                return !strcmp(
+                    properties.extensionName,
+                    VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
             }) != instanceSupportedExtensions.end())
     {
         extNames.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);

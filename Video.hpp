@@ -4,7 +4,6 @@
 #include "Shader.hpp"
 #include "Window.hpp"
 #include <vector>
-#include <array>
 #include <vulkan/vulkan.h>
 
 class Video
@@ -58,9 +57,7 @@ private:
     VkSwapchainKHR m_Swapchain;
     std::vector<VkImageView> m_SwapchainImageViews;
     std::vector<VkFramebuffer> m_Framebuffers;
-    std::array<Shader, 2> m_ShaderModules = {
-        {{ShaderType::Vertex, "shader.vert.spv"},
-         {ShaderType::Fragment, "shader.frag.spv"}}};
+    std::vector<Shader> m_Shaders;
     VkRenderPass m_RenderPass;
     VkCommandPool m_CommandPool;
     VkCommandBuffer m_CommandBuffer;

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.7)
 
 project(SDL2Test)
 
-set(WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+add_definitions(-DWORKING_DIRECTORY=\"${PROJECT_SOURCE_DIR}\")
 
 set(CMAKE_CXX_STANDARD 20)
 
