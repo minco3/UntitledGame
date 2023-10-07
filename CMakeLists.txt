@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.7)
 
 project(UntitledGame)
 
@@ -26,7 +26,6 @@ file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/shader)
 file(GLOB shader_files CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/shader/*")
 foreach(shader_file ${shader_files})
     get_filename_component(FILENAME ${shader_file} NAME)
-    message(STATUS ${shader_file})
     add_custom_command(
         TARGET shaders
         COMMAND bash -c "${Vulkan_GLSLC_EXECUTABLE} -c -g ${shader_file} -o ${PROJECT_BINARY_DIR}/shader/${FILENAME}.spv"
@@ -36,7 +35,7 @@ foreach(shader_file ${shader_files})
 endforeach()
 
 add_executable(UntitledGame main.cpp ${source_files} ${SHADERS})
-# add_dependencies(UntitledGame shaders)
+add_dependencies(UntitledGame shaders)
 target_link_libraries(UntitledGame SDL2::SDL2main)
 target_link_libraries(UntitledGame SDL2::SDL2)
 target_link_libraries(UntitledGame SDL2_image::SDL2_image)
