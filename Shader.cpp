@@ -6,7 +6,7 @@ std::vector<Shader> LoadShaders(VkDevice device)
 {
     std::vector<Shader> shaders;
     std::filesystem::path current_directory =
-        std::filesystem::path(WORKING_DIRECTORY).append("build");
+        std::filesystem::path(WORKING_DIRECTORY).append("build").append("shader");
     for (std::filesystem::directory_entry entry :
          std::filesystem::directory_iterator(current_directory))
     {

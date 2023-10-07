@@ -28,4 +28,5 @@ void Application::Update()
             }
         }
     }
+    m_Video.UpdateUnformBuffers();
 }

@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.7)
+cmake_minimum_required(VERSION 3.19)
 
-project(SDL2Test)
+project(UntitledGame)
 
 add_definitions(-DWORKING_DIRECTORY=\"${PROJECT_SOURCE_DIR}\")
 
@@ -18,22 +18,32 @@ include_directories(~VulkanSDK)
 
 file(GLOB source_files CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/*.cpp" )
 
-add_executable(SDL2Test main.cpp ${source_files})
-target_link_libraries(SDL2Test SDL2::SDL2main)
-target_link_libraries(SDL2Test SDL2::SDL2)
-target_link_libraries(SDL2Test SDL2_image::SDL2_image)
-target_link_libraries(SDL2Test Vulkan::Vulkan)
-if (WIN32)
-target_link_libraries(SDL2Test glm)
-else()
-target_link_libraries(SDL2Test glm::glm)
-endif (WIN32)
-target_link_libraries(SDL2Test fmt::fmt)
+add_custom_target(shaders ALL DEPENDS ${SPV_SHADERS})
+
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/shader)
 
 # maybe switch this to a batch file so its one command to compile all shaders rather than one per shader
 file(GLOB shader_files CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/shader/*")
 foreach(shader_file ${shader_files})
-    add_custom_command(TARGET SDL2Test
-        POST_BUILD
-        COMMAND bash -c "${Vulkan_GLSLC_EXECUTABLE} -c -g ${shader_file}")
+    get_filename_component(FILENAME ${shader_file} NAME)
+    message(STATUS ${shader_file})
+    add_custom_command(
+        TARGET shaders
+        COMMAND bash -c "${Vulkan_GLSLC_EXECUTABLE} -c -g ${shader_file} -o ${PROJECT_BINARY_DIR}/shader/${FILENAME}.spv"
+        DEPENDS ${shader_file}
+        COMMENT "Compiling ${FILENAME}")
+    list(APPEND SPV_SHADERS ${SHADER_DIR}/shaders/${FILENAME}.spv)
 endforeach()
+
+add_executable(UntitledGame main.cpp ${source_files} ${SHADERS})
+# add_dependencies(UntitledGame shaders)
+target_link_libraries(UntitledGame SDL2::SDL2main)
+target_link_libraries(UntitledGame SDL2::SDL2)
+target_link_libraries(UntitledGame SDL2_image::SDL2_image)
+target_link_libraries(UntitledGame Vulkan::Vulkan)
+if (WIN32)
+target_link_libraries(UntitledGame glm)
+else()
+target_link_libraries(UntitledGame glm::glm)
+endif (WIN32)
+target_link_libraries(UntitledGame fmt::fmt)

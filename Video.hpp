@@ -13,6 +13,7 @@ public:
     ~Video();
 
     void Render();
+    void UpdateUnformBuffers();
 
 private:
     void CreateInstance();
@@ -24,6 +25,9 @@ private:
     void CreateFramebuffers();
     void CreateCommandBuffer();
     void CreateVertexBuffer();
+    void CreateUniformBuffers();
+    void CreateDescriptorPool();
+    void CreateDescriptorSets();
     void CreateMemoryBarriers();
     void CreatePipelineLayout();
 
@@ -43,7 +47,15 @@ private:
         const VkFormat requestedFormat);
     std::vector<VkImage> GetSwapchainImages();
     VkQueue GetQueue(uint32_t queueFamily, uint32_t index);
-    VkInstanceCreateFlags GetInstanceCreateFlags(const std::vector<const char *>& extentionNames);
+    VkInstanceCreateFlags
+    GetInstanceCreateFlags(const std::vector<const char*>& extentionNames);
+    uint32_t FindMemoryType(
+        VkMemoryRequirements VkMemoryRequirements,
+        VkMemoryPropertyFlags memoryPropertyFlags);
+    void CreateBuffer(
+        VkDeviceSize bufferSize, VkBufferUsageFlags usageFlags,
+        VkMemoryPropertyFlags propertyFlags, VkDeviceMemory& bufferMemory,
+        VkBuffer& buffer);
 
     std::vector<DeviceQueue> m_DeviceQueues;
     VkInstance m_Instance;
@@ -61,12 +73,19 @@ private:
     VkCommandPool m_CommandPool;
     VkCommandBuffer m_CommandBuffer;
     VkBuffer m_VertexBuffer;
+    std::vector<VkBuffer> m_UniformBuffers;
+    std::vector<VkDeviceMemory> m_UniformBufferMemory;
+    std::vector<void*> m_UniformBufferMemoryMapped;
     VkDeviceMemory m_VertexBufferMemory;
     uint32_t m_QueueFamilyIndex = 0;
     VkQueue m_Queue;
     VkPipeline m_Pipeline;
+    VkDescriptorPool m_DescriptorPool;
+    std::vector<VkDescriptorSet> m_DescriptorSets;
+    VkDescriptorSetLayout m_DescriptorSetLayout;
     VkPipelineLayout m_PipelineLayout;
     VkSemaphore m_Semaphore;
     VkSemaphore m_RenderSemaphore;
     VkFence m_Fence;
+    uint32_t m_ImageIndex = 0;
 };
