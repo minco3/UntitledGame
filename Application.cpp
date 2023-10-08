@@ -28,5 +28,6 @@ void Application::Update()
             }
         }
     }
-    m_Video.UpdateUnformBuffers();
+    m_Video.UpdateUnformBuffers(m_Theta);
+    m_Theta += 0.1f;
 }

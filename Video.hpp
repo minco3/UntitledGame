@@ -13,7 +13,7 @@ public:
     ~Video();
 
     void Render();
-    void UpdateUnformBuffers();
+    void UpdateUnformBuffers(float theta);
 
 private:
     void CreateInstance();

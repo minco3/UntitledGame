@@ -156,12 +156,16 @@ void Video::Render()
     LogVulkanError("failed to present queue", result);
 }
 
-void Video::UpdateUnformBuffers()
+void Video::UpdateUnformBuffers(float theta)
 {
-    float* rotation =
-        static_cast<float*>(m_UniformBufferMemoryMapped.at(m_ImageIndex));
-    *rotation = 1.0f;
-    *(rotation+5) = 1.0f;
+    glm::mat2x4* rotation =
+        static_cast<glm::mat2x4*>(m_UniformBufferMemoryMapped.at(m_ImageIndex));
+    glm::mat2x4 mat;
+    mat[0].x = cos(theta*M_PI/180);
+    mat[0].y = -sin(theta*M_PI/180);
+    mat[1].x = sin(theta*M_PI/180);
+    mat[1].y = cos(theta*M_PI/180);
+    *rotation = mat;
 }
 
 void Video::CreateInstance()
@@ -511,7 +515,7 @@ void Video::CreateUniformBuffers()
     m_UniformBuffers.resize(m_SwapchainImageViews.size());
     m_UniformBufferMemoryMapped.resize(m_SwapchainImageViews.size());
     m_UniformBufferMemory.resize(m_SwapchainImageViews.size());
-    VkDeviceSize bufferSize = 32;
+    VkDeviceSize bufferSize = sizeof(glm::mat2x4);
     for (size_t i = 0; i < m_UniformBuffers.size(); i++)
     {
         CreateBuffer(
@@ -566,7 +570,7 @@ void Video::CreateDescriptorSets()
         VkDescriptorBufferInfo bufferInfo = {
             .buffer = m_UniformBuffers.at(i),
             .offset = 0,
-            .range = 32};
+            .range = sizeof(glm::mat2x4)};
 
         VkWriteDescriptorSet descriptorWrite = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
