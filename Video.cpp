@@ -158,10 +158,10 @@ void Video::Render()
 
 void Video::UpdateUnformBuffers()
 {
-    glm::mat2* rotation =
-        static_cast<glm::mat2*>(m_UniformBufferMemoryMapped.at(m_ImageIndex));
-    glm::mat2 mat(1.0f);
-    *rotation = mat;
+    float* rotation =
+        static_cast<float*>(m_UniformBufferMemoryMapped.at(m_ImageIndex));
+    *rotation = 1.0f;
+    *(rotation+5) = 1.0f;
 }
 
 void Video::CreateInstance()
@@ -511,7 +511,7 @@ void Video::CreateUniformBuffers()
     m_UniformBuffers.resize(m_SwapchainImageViews.size());
     m_UniformBufferMemoryMapped.resize(m_SwapchainImageViews.size());
     m_UniformBufferMemory.resize(m_SwapchainImageViews.size());
-    VkDeviceSize bufferSize = sizeof(glm::mat2);
+    VkDeviceSize bufferSize = 32;
     for (size_t i = 0; i < m_UniformBuffers.size(); i++)
     {
         CreateBuffer(
@@ -566,7 +566,7 @@ void Video::CreateDescriptorSets()
         VkDescriptorBufferInfo bufferInfo = {
             .buffer = m_UniformBuffers.at(i),
             .offset = 0,
-            .range = sizeof(glm::mat2)};
+            .range = 32};
 
         VkWriteDescriptorSet descriptorWrite = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
