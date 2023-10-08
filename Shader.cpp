@@ -5,10 +5,10 @@
 std::vector<Shader> LoadShaders(VkDevice device)
 {
     std::vector<Shader> shaders;
-    std::filesystem::path current_directory =
+    std::filesystem::path shader_directory =
         std::filesystem::path(WORKING_DIRECTORY).append("build").append("shader");
     for (std::filesystem::directory_entry entry :
-         std::filesystem::directory_iterator(current_directory))
+         std::filesystem::directory_iterator(shader_directory))
     {
         if (entry.path().extension() == ".spv") // a.frag(.spv)
         {
@@ -26,9 +26,9 @@ std::vector<Shader> LoadShaders(VkDevice device)
             // if it doesnt look for the missing half
             std::filesystem::path shaderType =
                 entry.path().stem().extension(); // a(.frag).spv
-            std::filesystem::path vertShaderPath = current_directory;
+            std::filesystem::path vertShaderPath = shader_directory;
             vertShaderPath.append(name + ".vert.spv");
-            std::filesystem::path fragShaderPath = current_directory;
+            std::filesystem::path fragShaderPath = shader_directory;
             fragShaderPath.append(name + ".frag.spv");
             if (shaderType == ".vert")
             {

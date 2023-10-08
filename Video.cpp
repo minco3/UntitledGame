@@ -981,7 +981,7 @@ void Video::CreateBuffer(
     VkResult result;
     VkBufferCreateInfo bufferCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = vertices.size() * sizeof(Vertex),
+        .size = bufferSize,
         .usage = usageFlags,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE};
     result = vkCreateBuffer(m_Device, &bufferCreateInfo, nullptr, &buffer);
