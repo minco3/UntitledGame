@@ -17,6 +17,12 @@ Window::~Window() {
     SDL_DestroyWindow(m_Window);
 }
 
+SDL_Window* Window::operator()()
+{
+    return m_Window;
+}
+
+
 std::vector<const char *> Window::GetRequiredExtensionNames() const
 {
     unsigned int numExtentions;
@@ -32,14 +38,4 @@ std::vector<const char *> Window::GetRequiredExtensionNames() const
         LogError("Error getting SDL required vulkan extensions");
     }
     return sdlExtNames;
-}
-
-VkSurfaceKHR Window::CreateSDLSurface(VkInstance instance)
-{
-    VkSurfaceKHR surface;
-    if (SDL_Vulkan_CreateSurface(m_Window, instance, &surface) != SDL_TRUE)
-    {
-        LogError(fmt::format("Could not create SDL surface: {}", SDL_GetError()));
-    }
-    return surface;
 }

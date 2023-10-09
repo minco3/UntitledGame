@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Log.hpp"
 #include <vulkan/vulkan_core.h>
 
 template <typename T> class Buffer

@@ -2,7 +2,7 @@
 #include "Log.hpp"
 #include <vulkan/vulkan_core.h>
 
-VulkanInstance::VulkanInstance(Window window)
+VulkanInstance::VulkanInstance(const Window& window)
 {
     VkResult result;
 
@@ -33,8 +33,8 @@ VulkanInstance::VulkanInstance(Window window)
     LogVulkanError("Could not create vulkan instance", result);
 }
 
-VkInstanceCreateFlags
-VulkanInstance::GetInstanceCreateFlags(const std::vector<const char*>& extentionNames)
+VkInstanceCreateFlags VulkanInstance::GetInstanceCreateFlags(
+    const std::vector<const char*>& extentionNames)
 {
     VkInstanceCreateFlags instanceCreateFlags = {};
     if (std::find_if(
@@ -98,7 +98,8 @@ std::vector<const char*> VulkanInstance::GetExtensionNames(const Window& window)
     return extNames;
 }
 
-std::vector<VkExtensionProperties> VulkanInstance::GetInstanceSupportedExtensions()
+std::vector<VkExtensionProperties>
+VulkanInstance::GetInstanceSupportedExtensions()
 {
     VkResult result;
 

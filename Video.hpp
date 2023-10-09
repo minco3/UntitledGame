@@ -1,12 +1,13 @@
 #pragma once
 
-#include "Instance.hpp"
+#include "Buffer.hpp"
 #include "DeviceQueue.hpp"
 #include "Shader.hpp"
-#include "Window.hpp"
-#include "Vertex.hpp"
+#include "Instance.hpp"
 #include "UniformBuffer.hpp"
-#include "Buffer.hpp"
+#include "Vertex.hpp"
+#include "Window.hpp"
+#include "Surface.hpp"
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -48,13 +49,11 @@ private:
         const VkFormat requestedFormat);
     std::vector<VkImage> GetSwapchainImages();
     VkQueue GetQueue(uint32_t queueFamily, uint32_t index);
-    VkInstanceCreateFlags
-    GetInstanceCreateFlags(const std::vector<const char*>& extentionNames);
 
     std::vector<DeviceQueue> m_DeviceQueues;
     Window m_Window;
     VulkanInstance m_Instance;
-    VkSurfaceKHR m_Surface;
+    Surface m_Surface;
     VkSurfaceFormatKHR m_SurfaceFormat;
     VkSurfaceCapabilitiesKHR m_SurfaceCapabilities;
     VkPhysicalDevice m_PhysicalDevice;

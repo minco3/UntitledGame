@@ -16,10 +16,8 @@
 Video::Video()
     : m_Window(
           "Untitled Game", {SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED},
-          {1200, 800}, SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN),
-      m_Instance(m_Window)
+          {1200, 800}, SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN), m_Instance(m_Window), m_Surface(m_Window, m_Instance)
 {
-    m_Surface = m_Window.CreateSDLSurface(m_Instance());
     CreateDevice();
     m_SurfaceCapabilities = GetSurfaceCapabilities();
     CreateSwapchain();
@@ -75,7 +73,7 @@ Video::~Video()
     vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
     vkDestroyPipeline(m_Device, m_Pipeline, nullptr);
     vkDestroyDevice(m_Device, nullptr);
-    vkDestroySurfaceKHR(m_Instance(), m_Surface, nullptr);
+    vkDestroySurfaceKHR(m_Instance(), m_Surface(), nullptr);
     vkDestroyInstance(m_Instance(), nullptr);
 }
 
@@ -200,7 +198,7 @@ void Video::CreateSwapchain()
     m_SurfaceFormat = GetSurfaceFormat();
     VkSwapchainCreateInfoKHR swapchainCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .surface = m_Surface,
+        .surface = m_Surface(),
         .minImageCount = m_SurfaceCapabilities.minImageCount + 1,
         .imageFormat = m_SurfaceFormat.format,
         .imageColorSpace = m_SurfaceFormat.colorSpace,
@@ -633,7 +631,7 @@ Video::GetDeviceQueueCreateInfos(VkPhysicalDevice physicalDevice)
         const VkQueueFamilyProperties& properties = queueFamilyProperties.at(i);
 
         result = vkGetPhysicalDeviceSurfaceSupportKHR(
-            physicalDevice, i, m_Surface,
+            physicalDevice, i, m_Surface(),
             &m_DeviceQueues.at(i).m_PresentationSupported);
         LogVulkanError(
             fmt::format(
@@ -701,7 +699,7 @@ VkSurfaceCapabilitiesKHR Video::GetSurfaceCapabilities()
     VkSurfaceCapabilitiesKHR surfaceCapabilities;
 
     result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-        m_PhysicalDevice, m_Surface, &surfaceCapabilities);
+        m_PhysicalDevice, m_Surface(), &surfaceCapabilities);
 
     LogDebug(fmt::format(
         "Surface capabiltiies:\t{}", surfaceCapabilities.currentExtent));
@@ -719,12 +717,12 @@ const std::vector<VkSurfaceFormatKHR> Video::GetCompatableSurfaceFormats()
     VkResult result;
     uint32_t surfaceFormatCount = 0;
     result = vkGetPhysicalDeviceSurfaceFormatsKHR(
-        m_PhysicalDevice, m_Surface, &surfaceFormatCount, nullptr);
+        m_PhysicalDevice, m_Surface(), &surfaceFormatCount, nullptr);
     LogVulkanError("Failed to get supported surface format count", result);
     std::vector<VkSurfaceFormatKHR> surfaceFormats(
         static_cast<size_t>(surfaceFormatCount));
     result = vkGetPhysicalDeviceSurfaceFormatsKHR(
-        m_PhysicalDevice, m_Surface, &surfaceFormatCount,
+        m_PhysicalDevice, m_Surface(), &surfaceFormatCount,
         surfaceFormats.data());
     LogVulkanError(
         "Failed to get surface formats supported by the device", result);

@@ -6,9 +6,8 @@
 class VulkanInstance
 {
 public:
-    VulkanInstance(Window window);
-    constexpr VkInstance& operator()() { return m_Instance; }
-
+    VulkanInstance(const Window& window);
+    const VkInstance& operator()() { return m_Instance; }
 private:
     std::vector<const char*> GetExtensionNames(const Window& window);
     VkInstanceCreateFlags

@@ -10,6 +10,7 @@ class Window
 public:
     Window(const char* title, glm::i32vec2 pos, glm::i32vec2 size, uint32_t flags);
     ~Window();
+    SDL_Window* operator()();
     std::vector<const char*> GetRequiredExtensionNames() const;
     VkSurfaceKHR CreateSDLSurface(VkInstance instance);
 private:
