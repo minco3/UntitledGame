@@ -5,4 +5,5 @@
 struct UniformBufferObject
 {
     glm::mat2x4 rotation;
+    float colorRotation;
 };

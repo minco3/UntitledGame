@@ -166,6 +166,7 @@ void Video::UpdateUnformBuffers(float theta)
     ubo.rotation[0].y = -sin(theta*M_PI/180);
     ubo.rotation[1].x = sin(theta*M_PI/180);
     ubo.rotation[1].y = cos(theta*M_PI/180);
+    ubo.colorRotation = theta;
     *buffer = ubo;
 }
 
