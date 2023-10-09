@@ -1,6 +1,7 @@
 #include "Video.hpp"
 #include "Log.hpp"
 #include "Vertex.hpp"
+#include "UniformBuffer.hpp"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_video.h>
 #include <SDL2/SDL_vulkan.h>
@@ -158,14 +159,14 @@ void Video::Render()
 
 void Video::UpdateUnformBuffers(float theta)
 {
-    glm::mat2x4* rotation =
-        static_cast<glm::mat2x4*>(m_UniformBufferMemoryMapped.at(m_ImageIndex));
-    glm::mat2x4 mat;
-    mat[0].x = cos(theta*M_PI/180);
-    mat[0].y = -sin(theta*M_PI/180);
-    mat[1].x = sin(theta*M_PI/180);
-    mat[1].y = cos(theta*M_PI/180);
-    *rotation = mat;
+    UniformBufferObject* buffer =
+        static_cast<UniformBufferObject*>(m_UniformBufferMemoryMapped.at(m_ImageIndex));
+    UniformBufferObject ubo;
+    ubo.rotation[0].x = cos(theta*M_PI/180);
+    ubo.rotation[0].y = -sin(theta*M_PI/180);
+    ubo.rotation[1].x = sin(theta*M_PI/180);
+    ubo.rotation[1].y = cos(theta*M_PI/180);
+    *buffer = ubo;
 }
 
 void Video::CreateInstance()
@@ -515,7 +516,7 @@ void Video::CreateUniformBuffers()
     m_UniformBuffers.resize(m_SwapchainImageViews.size());
     m_UniformBufferMemoryMapped.resize(m_SwapchainImageViews.size());
     m_UniformBufferMemory.resize(m_SwapchainImageViews.size());
-    VkDeviceSize bufferSize = sizeof(glm::mat2x4);
+    VkDeviceSize bufferSize = sizeof(UniformBufferObject);
     for (size_t i = 0; i < m_UniformBuffers.size(); i++)
     {
         CreateBuffer(
@@ -570,7 +571,7 @@ void Video::CreateDescriptorSets()
         VkDescriptorBufferInfo bufferInfo = {
             .buffer = m_UniformBuffers.at(i),
             .offset = 0,
-            .range = sizeof(glm::mat2x4)};
+            .range = sizeof(UniformBufferObject)};
 
         VkWriteDescriptorSet descriptorWrite = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
