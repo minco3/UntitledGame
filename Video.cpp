@@ -1,7 +1,8 @@
 #include "Video.hpp"
+#include "Buffer.hpp"
 #include "Log.hpp"
-#include "Vertex.hpp"
 #include "UniformBuffer.hpp"
+#include "Vertex.hpp"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_video.h>
 #include <SDL2/SDL_vulkan.h>
@@ -15,10 +16,10 @@
 Video::Video()
     : m_Window(
           "Untitled Game", {SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED},
-          {1200, 800}, SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN)
+          {1200, 800}, SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN),
+      m_Instance(m_Window)
 {
-    CreateInstance();
-    m_Surface = m_Window.CreateSDLSurface(m_Instance);
+    m_Surface = m_Window.CreateSDLSurface(m_Instance());
     CreateDevice();
     m_SurfaceCapabilities = GetSurfaceCapabilities();
     CreateSwapchain();
@@ -44,11 +45,11 @@ Video::~Video()
     vkDestroyFence(m_Device, m_Fence, nullptr);
     vkDestroySemaphore(m_Device, m_Semaphore, nullptr);
     vkDestroySemaphore(m_Device, m_RenderSemaphore, nullptr);
-    vkDestroyBuffer(m_Device, m_VertexBuffer, nullptr);
+    vkDestroyBuffer(m_Device, m_VertexBuffer(), nullptr);
     vkFreeMemory(m_Device, m_VertexBufferMemory, nullptr);
-    for (VkBuffer uniformBuffer : m_UniformBuffers)
+    for (auto uniformBuffer : m_UniformBuffers)
     {
-        vkDestroyBuffer(m_Device, uniformBuffer, nullptr);
+        vkDestroyBuffer(m_Device, uniformBuffer(), nullptr);
     }
     for (VkDeviceMemory uniformBufferMemory : m_UniformBufferMemory)
     {
@@ -74,8 +75,8 @@ Video::~Video()
     vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
     vkDestroyPipeline(m_Device, m_Pipeline, nullptr);
     vkDestroyDevice(m_Device, nullptr);
-    vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
-    vkDestroyInstance(m_Instance, nullptr);
+    vkDestroySurfaceKHR(m_Instance(), m_Surface, nullptr);
+    vkDestroyInstance(m_Instance(), nullptr);
 }
 
 void Video::Render()
@@ -117,7 +118,7 @@ void Video::Render()
         m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
 
     VkDeviceSize offset = 0;
-    vkCmdBindVertexBuffers(m_CommandBuffer, 0, 1, &m_VertexBuffer, &offset);
+    vkCmdBindVertexBuffers(m_CommandBuffer, 0, 1, &m_VertexBuffer(), &offset);
 
     vkCmdBindDescriptorSets(
         m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0,
@@ -159,46 +160,15 @@ void Video::Render()
 
 void Video::UpdateUnformBuffers(float theta)
 {
-    UniformBufferObject* buffer =
-        static_cast<UniformBufferObject*>(m_UniformBufferMemoryMapped.at(m_ImageIndex));
+    UniformBufferObject* buffer = static_cast<UniformBufferObject*>(
+        m_UniformBufferMemoryMapped.at(m_ImageIndex));
     UniformBufferObject ubo;
-    ubo.rotation[0].x = cos(theta*M_PI/180);
-    ubo.rotation[0].y = -sin(theta*M_PI/180);
-    ubo.rotation[1].x = sin(theta*M_PI/180);
-    ubo.rotation[1].y = cos(theta*M_PI/180);
+    ubo.rotation[0].x = cos(theta * M_PI / 180);
+    ubo.rotation[0].y = -sin(theta * M_PI / 180);
+    ubo.rotation[1].x = sin(theta * M_PI / 180);
+    ubo.rotation[1].y = cos(theta * M_PI / 180);
     ubo.colorRotation = theta;
     *buffer = ubo;
-}
-
-void Video::CreateInstance()
-{
-    VkResult result;
-
-    VkApplicationInfo applicationInfo = {
-        .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-        .pApplicationName = "Untitled Game",
-        .applicationVersion = 1,
-        .pEngineName = nullptr,
-        .apiVersion = VK_API_VERSION_1_3};
-
-    std::vector<const char*> instanceLayers = {"VK_LAYER_KHRONOS_validation"};
-
-    std::vector<const char*> extNames = GetExtensionNames();
-
-    VkInstanceCreateFlags instanceCreateFlags =
-        GetInstanceCreateFlags(extNames);
-
-    VkInstanceCreateInfo instanceCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .flags = instanceCreateFlags,
-        .pApplicationInfo = &applicationInfo,
-        .enabledLayerCount = static_cast<uint32_t>(instanceLayers.size()),
-        .ppEnabledLayerNames = instanceLayers.data(),
-        .enabledExtensionCount = static_cast<uint32_t>(extNames.size()),
-        .ppEnabledExtensionNames = extNames.data()};
-
-    result = vkCreateInstance(&instanceCreateInfo, nullptr, &m_Instance);
-    LogVulkanError("Could not create vulkan instance", result);
 }
 
 void Video::CreateDevice()
@@ -495,17 +465,16 @@ void Video::CreateCommandBuffer()
 
 void Video::CreateVertexBuffer()
 {
-    VkDeviceSize bufferSize = sizeof(Vertex) * vertices.size();
 
-    CreateBuffer(
-        bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+    m_VertexBuffer.Create(m_Device, m_PhysicalDevice,
+        vertices.size(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        m_VertexBufferMemory, m_VertexBuffer);
+        m_VertexBufferMemory);
 
     // load hard-coded vertices into memory
     void* data;
-    vkMapMemory(m_Device, m_VertexBufferMemory, 0, bufferSize, 0, &data);
+    vkMapMemory(m_Device, m_VertexBufferMemory, 0, m_VertexBuffer.size(), 0, &data);
     std::span<Vertex> memorySpan(static_cast<Vertex*>(data), vertices.size());
     std::copy_n(vertices.begin(), vertices.size(), memorySpan.begin());
     vkUnmapMemory(m_Device, m_VertexBufferMemory);
@@ -517,17 +486,17 @@ void Video::CreateUniformBuffers()
     m_UniformBuffers.resize(m_SwapchainImageViews.size());
     m_UniformBufferMemoryMapped.resize(m_SwapchainImageViews.size());
     m_UniformBufferMemory.resize(m_SwapchainImageViews.size());
-    VkDeviceSize bufferSize = sizeof(UniformBufferObject);
     for (size_t i = 0; i < m_UniformBuffers.size(); i++)
     {
-        CreateBuffer(
-            bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        m_UniformBuffers.at(i).Create(
+            m_Device, m_PhysicalDevice, 1, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            m_UniformBufferMemory.at(i), m_UniformBuffers.at(i));
+            m_UniformBufferMemory.at(i));
 
         result = vkMapMemory(
-            m_Device, m_UniformBufferMemory.at(i), 0, bufferSize, 0,
+            m_Device, m_UniformBufferMemory.at(i), 0,
+            m_UniformBuffers.at(i).size(), 0,
             &m_UniformBufferMemoryMapped.at(i));
         LogVulkanError("failed to map uniform buffer memory", result);
     }
@@ -570,7 +539,7 @@ void Video::CreateDescriptorSets()
     for (size_t i = 0; i < m_SwapchainImageViews.size(); i++)
     {
         VkDescriptorBufferInfo bufferInfo = {
-            .buffer = m_UniformBuffers.at(i),
+            .buffer = m_UniformBuffers.at(i)(),
             .offset = 0,
             .range = sizeof(UniformBufferObject)};
 
@@ -605,83 +574,11 @@ void Video::CreateMemoryBarriers()
     LogVulkanError("failed to create fence", result);
 }
 
-std::vector<const char*> Video::GetExtensionNames()
-{
-    std::vector<const char*> extNames = {
-        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME};
-
-    std::vector<const char*> windowExtNames =
-        m_Window.GetRequiredExtensionNames();
-    extNames.insert(
-        extNames.end(), windowExtNames.begin(), windowExtNames.end());
-
-    std::vector<VkExtensionProperties> instanceSupportedExtensions =
-        GetInstanceSupportedExtensions();
-
-    if (std::find_if(
-            instanceSupportedExtensions.begin(),
-            instanceSupportedExtensions.end(),
-            [](VkExtensionProperties& properties)
-            {
-                return !strcmp(
-                    properties.extensionName,
-                    VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-            }) != instanceSupportedExtensions.end())
-    {
-        extNames.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-    }
-
-    for (const char* extName : extNames)
-    {
-        if (std::find_if(
-                instanceSupportedExtensions.begin(),
-                instanceSupportedExtensions.end(),
-                [extName](VkExtensionProperties& properties) {
-                    return !strcmp(properties.extensionName, extName);
-                }) == instanceSupportedExtensions.end())
-        {
-            LogError(
-                fmt::format("Required extension {} not supported!", extName));
-        }
-    }
-
-    LogDebug("Enabled exensions:");
-    for (const char* extName : extNames)
-    {
-        LogDebug(fmt::format("\t{}", extName));
-    }
-    return extNames;
-}
-
-std::vector<VkExtensionProperties> Video::GetInstanceSupportedExtensions()
-{
-    VkResult result;
-
-    uint32_t instanceSupportedExtensionCount;
-    result = vkEnumerateInstanceExtensionProperties(
-        nullptr, &instanceSupportedExtensionCount, nullptr);
-    LogVulkanError("Failed to get instance supported extension count", result);
-
-    std::vector<VkExtensionProperties> instanceSupportedExtensions(
-        instanceSupportedExtensionCount);
-    result = vkEnumerateInstanceExtensionProperties(
-        nullptr, &instanceSupportedExtensionCount,
-        instanceSupportedExtensions.data());
-    LogVulkanError("Failed to get instance supported extension count", result);
-
-    LogDebug("Instance Supported Extensions:");
-    for (const VkExtensionProperties& properties : instanceSupportedExtensions)
-    {
-        LogDebug(fmt::format("\t{}", properties.extensionName));
-    }
-    return instanceSupportedExtensions;
-}
-
 std::vector<VkPhysicalDevice> Video::GetPhysicalDevices()
 {
     VkResult result;
     uint32_t deviceCount = 0;
-    result = vkEnumeratePhysicalDevices(m_Instance, &deviceCount, nullptr);
+    result = vkEnumeratePhysicalDevices(m_Instance(), &deviceCount, nullptr);
     if (deviceCount == 0)
     {
         LogError("No vukan devices found!");
@@ -691,7 +588,7 @@ std::vector<VkPhysicalDevice> Video::GetPhysicalDevices()
     std::vector<VkPhysicalDevice> physicalDevices(
         static_cast<size_t>(deviceCount));
     result = vkEnumeratePhysicalDevices(
-        m_Instance, &deviceCount, &physicalDevices.front());
+        m_Instance(), &deviceCount, &physicalDevices.front());
     LogVulkanError("Problem enumerating physical devices", result);
 
     LogDebug("Physical Devices:");
@@ -923,90 +820,4 @@ VkQueue Video::GetQueue(uint32_t queueFamily, uint32_t index)
     VkQueue queue;
     vkGetDeviceQueue(m_Device, index, 0, &queue);
     return queue;
-}
-
-VkInstanceCreateFlags
-Video::GetInstanceCreateFlags(const std::vector<const char*>& extentionNames)
-{
-    VkInstanceCreateFlags instanceCreateFlags = {};
-    if (std::find_if(
-            extentionNames.begin(), extentionNames.end(),
-            [](const char* extName) {
-                return !strcmp(
-                    extName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-            }) != extentionNames.end())
-    {
-        instanceCreateFlags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-    }
-
-    return instanceCreateFlags;
-}
-
-uint32_t Video::FindMemoryType(
-    VkMemoryRequirements memoryRequirements,
-    VkMemoryPropertyFlags memoryPropertyFlags)
-{
-    VkPhysicalDeviceMemoryProperties memoryProperties;
-    vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &memoryProperties);
-
-    uint32_t memoryTypeIndex;
-
-    LogDebug(
-        fmt::format("TypeFilter: {:#b}", memoryRequirements.memoryTypeBits));
-
-    LogDebug(fmt::format("Available Memory Types:"));
-    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
-    {
-        LogDebug(fmt::format(
-            "\t{:#b}", static_cast<uint32_t>(
-                           memoryProperties.memoryTypes[i].propertyFlags)));
-    }
-
-    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
-    {
-        if ((memoryRequirements.memoryTypeBits & (1 << i)) &&
-            (memoryProperties.memoryTypes[i].propertyFlags &
-             memoryPropertyFlags) == memoryPropertyFlags)
-        {
-            memoryTypeIndex = i;
-            break;
-        }
-        if (i == memoryProperties.memoryTypeCount - 1)
-        {
-            LogError("ERROR: failed to find suitable memory type\n");
-        }
-    }
-    return memoryTypeIndex;
-}
-
-void Video::CreateBuffer(
-    VkDeviceSize bufferSize, VkBufferUsageFlags usageFlags,
-    VkMemoryPropertyFlags memoryPropertyFlags, VkDeviceMemory& bufferMemory,
-    VkBuffer& buffer)
-{
-    VkResult result;
-    VkBufferCreateInfo bufferCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = bufferSize,
-        .usage = usageFlags,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE};
-    result = vkCreateBuffer(m_Device, &bufferCreateInfo, nullptr, &buffer);
-    LogVulkanError("failed to create vertex buffer", result);
-
-    VkMemoryRequirements memoryRequirements;
-    vkGetBufferMemoryRequirements(m_Device, buffer, &memoryRequirements);
-    uint32_t memoryTypeIndex =
-        FindMemoryType(memoryRequirements, memoryPropertyFlags);
-
-    VkMemoryAllocateInfo memoryAllocateInfo = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memoryRequirements.size,
-        .memoryTypeIndex = memoryTypeIndex};
-
-    result =
-        vkAllocateMemory(m_Device, &memoryAllocateInfo, nullptr, &bufferMemory);
-    LogVulkanError("failed to allocate buffer memory", result);
-
-    result = vkBindBufferMemory(m_Device, buffer, bufferMemory, 0);
-    LogVulkanError("failed to bind buffer memory", result);
 }

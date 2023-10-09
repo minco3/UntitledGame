@@ -1,8 +1,12 @@
 #pragma once
 
+#include "Instance.hpp"
 #include "DeviceQueue.hpp"
 #include "Shader.hpp"
 #include "Window.hpp"
+#include "Vertex.hpp"
+#include "UniformBuffer.hpp"
+#include "Buffer.hpp"
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -16,7 +20,6 @@ public:
     void UpdateUnformBuffers(float theta);
 
 private:
-    void CreateInstance();
     void CreateDevice();
     void CreateSwapchain();
     void CreateSwapchainImageViews();
@@ -32,8 +35,6 @@ private:
     void CreatePipelineLayout();
 
     std::vector<VkPipelineShaderStageCreateInfo> CreatePipelineShaderStage();
-    std::vector<const char*> GetExtensionNames();
-    std::vector<VkExtensionProperties> GetInstanceSupportedExtensions();
     std::vector<VkPhysicalDevice> GetPhysicalDevices();
     std::vector<VkDeviceQueueCreateInfo>
     GetDeviceQueueCreateInfos(VkPhysicalDevice device);
@@ -49,17 +50,10 @@ private:
     VkQueue GetQueue(uint32_t queueFamily, uint32_t index);
     VkInstanceCreateFlags
     GetInstanceCreateFlags(const std::vector<const char*>& extentionNames);
-    uint32_t FindMemoryType(
-        VkMemoryRequirements VkMemoryRequirements,
-        VkMemoryPropertyFlags memoryPropertyFlags);
-    void CreateBuffer(
-        VkDeviceSize bufferSize, VkBufferUsageFlags usageFlags,
-        VkMemoryPropertyFlags propertyFlags, VkDeviceMemory& bufferMemory,
-        VkBuffer& buffer);
 
     std::vector<DeviceQueue> m_DeviceQueues;
-    VkInstance m_Instance;
     Window m_Window;
+    VulkanInstance m_Instance;
     VkSurfaceKHR m_Surface;
     VkSurfaceFormatKHR m_SurfaceFormat;
     VkSurfaceCapabilitiesKHR m_SurfaceCapabilities;
@@ -72,8 +66,8 @@ private:
     VkRenderPass m_RenderPass;
     VkCommandPool m_CommandPool;
     VkCommandBuffer m_CommandBuffer;
-    VkBuffer m_VertexBuffer;
-    std::vector<VkBuffer> m_UniformBuffers;
+    Buffer<Vertex> m_VertexBuffer;
+    std::vector<Buffer<UniformBufferObject>> m_UniformBuffers;
     std::vector<VkDeviceMemory> m_UniformBufferMemory;
     std::vector<void*> m_UniformBufferMemoryMapped;
     VkDeviceMemory m_VertexBufferMemory;
