@@ -16,10 +16,11 @@
 Video::Video()
     : m_Window(
           "Untitled Game", {SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED},
-          {1200, 800}, SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN), m_Instance(m_Window), m_Surface(m_Window, m_Instance)
+          {1200, 800}, SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN),
+      m_Instance(m_Window), m_Surface(m_Window, m_Instance),
+      m_Device(m_Instance(), m_Surface)
 {
-    CreateDevice();
-    m_SurfaceCapabilities = GetSurfaceCapabilities();
+    m_SurfaceCapabilities = m_Surface.GetSurfaceCapabilities(m_Device);
     CreateSwapchain();
     CreateSwapchainImageViews();
     CreatePipelineLayout();
@@ -38,41 +39,41 @@ Video::~Video()
     VkResult result;
     result = vkQueueWaitIdle(m_Queue);
     LogVulkanError("Queue Wait Error", result);
-    result = vkDeviceWaitIdle(m_Device);
+    result = vkDeviceWaitIdle(m_Device());
     LogVulkanError("Device Wait Error", result);
-    vkDestroyFence(m_Device, m_Fence, nullptr);
-    vkDestroySemaphore(m_Device, m_Semaphore, nullptr);
-    vkDestroySemaphore(m_Device, m_RenderSemaphore, nullptr);
-    vkDestroyBuffer(m_Device, m_VertexBuffer(), nullptr);
-    vkFreeMemory(m_Device, m_VertexBufferMemory, nullptr);
+    vkDestroyFence(m_Device(), m_Fence, nullptr);
+    vkDestroySemaphore(m_Device(), m_Semaphore, nullptr);
+    vkDestroySemaphore(m_Device(), m_RenderSemaphore, nullptr);
+    vkDestroyBuffer(m_Device(), m_VertexBuffer(), nullptr);
+    vkFreeMemory(m_Device(), m_VertexBufferMemory, nullptr);
     for (auto uniformBuffer : m_UniformBuffers)
     {
-        vkDestroyBuffer(m_Device, uniformBuffer(), nullptr);
+        vkDestroyBuffer(m_Device(), uniformBuffer(), nullptr);
     }
     for (VkDeviceMemory uniformBufferMemory : m_UniformBufferMemory)
     {
-        vkFreeMemory(m_Device, uniformBufferMemory, nullptr);
+        vkFreeMemory(m_Device(), uniformBufferMemory, nullptr);
     }
     for (VkImageView imageView : m_SwapchainImageViews)
     {
-        vkDestroyImageView(m_Device, imageView, nullptr);
+        vkDestroyImageView(m_Device(), imageView, nullptr);
     }
-    vkDestroyPipelineLayout(m_Device, m_PipelineLayout, nullptr);
-    vkDestroyDescriptorPool(m_Device, m_DescriptorPool, nullptr);
-    vkDestroyDescriptorSetLayout(m_Device, m_DescriptorSetLayout, nullptr);
-    vkDestroyRenderPass(m_Device, m_RenderPass, nullptr);
+    vkDestroyPipelineLayout(m_Device(), m_PipelineLayout, nullptr);
+    vkDestroyDescriptorPool(m_Device(), m_DescriptorPool, nullptr);
+    vkDestroyDescriptorSetLayout(m_Device(), m_DescriptorSetLayout, nullptr);
+    vkDestroyRenderPass(m_Device(), m_RenderPass, nullptr);
     for (VkFramebuffer framebuffer : m_Framebuffers)
     {
-        vkDestroyFramebuffer(m_Device, framebuffer, nullptr);
+        vkDestroyFramebuffer(m_Device(), framebuffer, nullptr);
     }
-    vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
+    vkDestroyCommandPool(m_Device(), m_CommandPool, nullptr);
     for (Shader& shader : m_Shaders)
     {
         shader.DestroyShaderModules();
     }
-    vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
-    vkDestroyPipeline(m_Device, m_Pipeline, nullptr);
-    vkDestroyDevice(m_Device, nullptr);
+    vkDestroySwapchainKHR(m_Device(), m_Swapchain, nullptr);
+    vkDestroyPipeline(m_Device(), m_Pipeline, nullptr);
+    vkDestroyDevice(m_Device(), nullptr);
     vkDestroySurfaceKHR(m_Instance(), m_Surface(), nullptr);
     vkDestroyInstance(m_Instance(), nullptr);
 }
@@ -81,10 +82,10 @@ void Video::Render()
 {
     VkResult result;
     vkWaitForFences(
-        m_Device, 1, &m_Fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-    vkResetFences(m_Device, 1, &m_Fence);
+        m_Device(), 1, &m_Fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+    vkResetFences(m_Device(), 1, &m_Fence);
     result = vkAcquireNextImageKHR(
-        m_Device, m_Swapchain, std::numeric_limits<uint64_t>::max(),
+        m_Device(), m_Swapchain, std::numeric_limits<uint64_t>::max(),
         m_Semaphore, VK_NULL_HANDLE, &m_ImageIndex);
     LogVulkanError("failed to aquire next image", result);
 
@@ -169,29 +170,6 @@ void Video::UpdateUnformBuffers(float theta)
     *buffer = ubo;
 }
 
-void Video::CreateDevice()
-{
-    VkResult result;
-    std::vector<VkPhysicalDevice> physicalDevices = GetPhysicalDevices();
-    m_PhysicalDevice = physicalDevices[0];
-    std::vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos =
-        GetDeviceQueueCreateInfos(m_PhysicalDevice);
-    std::vector<const char*> deviceExtensions =
-        GetDeviceExtentionNames(m_PhysicalDevice);
-
-    VkDeviceCreateInfo deviceCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .queueCreateInfoCount =
-            static_cast<uint32_t>(deviceQueueCreateInfos.size()),
-        .pQueueCreateInfos = deviceQueueCreateInfos.data(),
-        .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
-        .ppEnabledExtensionNames = deviceExtensions.data()};
-
-    result =
-        vkCreateDevice(m_PhysicalDevice, &deviceCreateInfo, nullptr, &m_Device);
-    LogVulkanError("Could not create vulkan logical device", result);
-}
-
 void Video::CreateSwapchain()
 {
     VkResult result;
@@ -213,7 +191,7 @@ void Video::CreateSwapchain()
         .clipped = true};
 
     result = vkCreateSwapchainKHR(
-        m_Device, &swapchainCreateInfo, nullptr, &m_Swapchain);
+        m_Device(), &swapchainCreateInfo, nullptr, &m_Swapchain);
     LogVulkanError("Failed to create swapchain", result);
 }
 
@@ -242,7 +220,7 @@ void Video::CreateSwapchainImageViews()
                 .baseArrayLayer = 0,
                 .layerCount = 1}};
         result = vkCreateImageView(
-            m_Device, &swapchainImageViewCreateInfo, nullptr,
+            m_Device(), &swapchainImageViewCreateInfo, nullptr,
             &swapchainImageView);
         LogVulkanError("Failed to create swapchain image view", result);
     }
@@ -295,14 +273,14 @@ void Video::CreateRenderPass()
         .subpassCount = 1,
         .pSubpasses = &subpass};
     result = vkCreateRenderPass(
-        m_Device, &renderPassCreateInfo, nullptr, &m_RenderPass);
+        m_Device(), &renderPassCreateInfo, nullptr, &m_RenderPass);
     LogVulkanError("failed to create render pass", result);
 }
 
 void Video::CreateGraphicsPipeline()
 {
     VkResult result;
-    m_Shaders = LoadShaders(m_Device);
+    m_Shaders = LoadShaders(m_Device());
     std::vector<VkPipelineShaderStageCreateInfo> shaderStages =
         CreatePipelineShaderStage();
 
@@ -411,7 +389,7 @@ void Video::CreateGraphicsPipeline()
         .subpass = 0};
 
     result = vkCreateGraphicsPipelines(
-        m_Device, VK_NULL_HANDLE, 1, &graphicsPipelineCreateInfo, nullptr,
+        m_Device(), VK_NULL_HANDLE, 1, &graphicsPipelineCreateInfo, nullptr,
         &m_Pipeline);
     LogVulkanError("failed to create graphics pipeline", result);
 }
@@ -434,7 +412,7 @@ void Video::CreateFramebuffers()
             .layers = 1};
 
         result = vkCreateFramebuffer(
-            m_Device, &framebufferCreateInfo, nullptr, &framebuffer);
+            m_Device(), &framebufferCreateInfo, nullptr, &framebuffer);
         LogVulkanError(
             fmt::format("failed to create framebuffer {}", i), result);
     }
@@ -448,7 +426,7 @@ void Video::CreateCommandBuffer()
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
         .queueFamilyIndex = m_QueueFamilyIndex};
     result = vkCreateCommandPool(
-        m_Device, &commandPoolCreateInfo, nullptr, &m_CommandPool);
+        m_Device(), &commandPoolCreateInfo, nullptr, &m_CommandPool);
     LogVulkanError("failed to create command pool", result);
 
     VkCommandBufferAllocateInfo commandBuffersAllocateInfo{
@@ -457,25 +435,26 @@ void Video::CreateCommandBuffer()
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .commandBufferCount = 1};
     result = vkAllocateCommandBuffers(
-        m_Device, &commandBuffersAllocateInfo, &m_CommandBuffer);
+        m_Device(), &commandBuffersAllocateInfo, &m_CommandBuffer);
     LogVulkanError("failed to allocate command buffers", result);
 }
 
 void Video::CreateVertexBuffer()
 {
 
-    m_VertexBuffer.Create(m_Device, m_PhysicalDevice,
-        vertices.size(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+    m_VertexBuffer.Create(
+        m_Device, vertices.size(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         m_VertexBufferMemory);
 
     // load hard-coded vertices into memory
     void* data;
-    vkMapMemory(m_Device, m_VertexBufferMemory, 0, m_VertexBuffer.size(), 0, &data);
+    vkMapMemory(
+        m_Device(), m_VertexBufferMemory, 0, m_VertexBuffer.size(), 0, &data);
     std::span<Vertex> memorySpan(static_cast<Vertex*>(data), vertices.size());
     std::copy_n(vertices.begin(), vertices.size(), memorySpan.begin());
-    vkUnmapMemory(m_Device, m_VertexBufferMemory);
+    vkUnmapMemory(m_Device(), m_VertexBufferMemory);
 }
 
 void Video::CreateUniformBuffers()
@@ -487,13 +466,13 @@ void Video::CreateUniformBuffers()
     for (size_t i = 0; i < m_UniformBuffers.size(); i++)
     {
         m_UniformBuffers.at(i).Create(
-            m_Device, m_PhysicalDevice, 1, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            m_Device, 1, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             m_UniformBufferMemory.at(i));
 
         result = vkMapMemory(
-            m_Device, m_UniformBufferMemory.at(i), 0,
+            m_Device(), m_UniformBufferMemory.at(i), 0,
             m_UniformBuffers.at(i).size(), 0,
             &m_UniformBufferMemoryMapped.at(i));
         LogVulkanError("failed to map uniform buffer memory", result);
@@ -513,8 +492,8 @@ void Video::CreateDescriptorPool()
         .pPoolSizes = &poolSize};
 
     poolInfo.maxSets = static_cast<uint32_t>(m_SwapchainImageViews.size());
-    result =
-        vkCreateDescriptorPool(m_Device, &poolInfo, nullptr, &m_DescriptorPool);
+    result = vkCreateDescriptorPool(
+        m_Device(), &poolInfo, nullptr, &m_DescriptorPool);
     LogVulkanError("Failed to create descriptor pool", result);
 }
 
@@ -531,8 +510,8 @@ void Video::CreateDescriptorSets()
         .pSetLayouts = layouts.data()};
 
     m_DescriptorSets.resize(m_SwapchainImageViews.size());
-    result =
-        vkAllocateDescriptorSets(m_Device, &allocInfo, m_DescriptorSets.data());
+    result = vkAllocateDescriptorSets(
+        m_Device(), &allocInfo, m_DescriptorSets.data());
 
     for (size_t i = 0; i < m_SwapchainImageViews.size(); i++)
     {
@@ -550,7 +529,7 @@ void Video::CreateDescriptorSets()
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .pBufferInfo = &bufferInfo};
 
-        vkUpdateDescriptorSets(m_Device, 1, &descriptorWrite, 0, nullptr);
+        vkUpdateDescriptorSets(m_Device(), 1, &descriptorWrite, 0, nullptr);
     }
 }
 
@@ -560,180 +539,23 @@ void Video::CreateMemoryBarriers()
     VkSemaphoreCreateInfo semaphoreCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
     result = vkCreateSemaphore(
-        m_Device, &semaphoreCreateInfo, nullptr, &m_Semaphore);
+        m_Device(), &semaphoreCreateInfo, nullptr, &m_Semaphore);
     LogVulkanError("failed to create semaphore", result);
     result = vkCreateSemaphore(
-        m_Device, &semaphoreCreateInfo, nullptr, &m_RenderSemaphore);
+        m_Device(), &semaphoreCreateInfo, nullptr, &m_RenderSemaphore);
     LogVulkanError("failed to create semaphore", result);
     VkFenceCreateInfo fenceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .flags = VK_FENCE_CREATE_SIGNALED_BIT};
-    result = vkCreateFence(m_Device, &fenceCreateInfo, nullptr, &m_Fence);
+    result = vkCreateFence(m_Device(), &fenceCreateInfo, nullptr, &m_Fence);
     LogVulkanError("failed to create fence", result);
-}
-
-std::vector<VkPhysicalDevice> Video::GetPhysicalDevices()
-{
-    VkResult result;
-    uint32_t deviceCount = 0;
-    result = vkEnumeratePhysicalDevices(m_Instance(), &deviceCount, nullptr);
-    if (deviceCount == 0)
-    {
-        LogError("No vukan devices found!");
-    }
-    LogVulkanError("Could not fetch physical device count", result);
-
-    std::vector<VkPhysicalDevice> physicalDevices(
-        static_cast<size_t>(deviceCount));
-    result = vkEnumeratePhysicalDevices(
-        m_Instance(), &deviceCount, &physicalDevices.front());
-    LogVulkanError("Problem enumerating physical devices", result);
-
-    LogDebug("Physical Devices:");
-    for (uint32_t i = 0; i < deviceCount; i++)
-    {
-        VkPhysicalDeviceProperties properties;
-        vkGetPhysicalDeviceProperties(physicalDevices.at(i), &properties);
-        LogDebug(fmt::format(
-            "\tPhysical device [{}]: {}", i, properties.deviceName));
-    }
-
-    return physicalDevices;
-}
-
-std::vector<VkDeviceQueueCreateInfo>
-Video::GetDeviceQueueCreateInfos(VkPhysicalDevice physicalDevice)
-{
-    VkResult result;
-    uint32_t queueFamilyPropertyCount = 0;
-
-    vkGetPhysicalDeviceQueueFamilyProperties(
-        physicalDevice, &queueFamilyPropertyCount, nullptr);
-    if (queueFamilyPropertyCount == 0)
-    {
-        LogError("No physical device queues found");
-    }
-    std::vector<VkQueueFamilyProperties> queueFamilyProperties(
-        queueFamilyPropertyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(
-        physicalDevice, &queueFamilyPropertyCount,
-        queueFamilyProperties.data());
-
-    std::vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos(
-        static_cast<size_t>(queueFamilyPropertyCount));
-
-    m_DeviceQueues.resize(
-        queueFamilyPropertyCount, {{std::vector<float>{1.0f}}});
-
-    LogDebug("Queues:");
-    for (uint32_t i = 0; i < queueFamilyPropertyCount; i++)
-    {
-        const VkQueueFamilyProperties& properties = queueFamilyProperties.at(i);
-
-        result = vkGetPhysicalDeviceSurfaceSupportKHR(
-            physicalDevice, i, m_Surface(),
-            &m_DeviceQueues.at(i).m_PresentationSupported);
-        LogVulkanError(
-            fmt::format(
-                "Failed to check whether queue {} supports presentation", i),
-            result);
-
-        LogDebug(fmt::format(
-            "\tQueue Family [{}]: {:#b} {} {}", i, properties.queueFlags,
-            properties.queueCount,
-            static_cast<bool>(m_DeviceQueues.at(i).m_PresentationSupported)));
-
-        VkDeviceQueueCreateInfo deviceQueueCreateInfo = {
-            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-            .queueFamilyIndex = i,
-            .queueCount = 1,
-            .pQueuePriorities = m_DeviceQueues.at(i).m_Priorities.data()};
-        deviceQueueCreateInfos.at(i) = (deviceQueueCreateInfo);
-    }
-    return deviceQueueCreateInfos;
-}
-
-std::vector<const char*>
-Video::GetDeviceExtentionNames(VkPhysicalDevice physicalDevice)
-{
-    VkResult result;
-    uint32_t deviceSupportedExtensionsCount = 0;
-    std::vector<const char*> deviceExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME};
-
-    result = vkEnumerateDeviceExtensionProperties(
-        physicalDevice, nullptr, &deviceSupportedExtensionsCount, nullptr);
-    LogVulkanError("error getting available device extension count", result);
-
-    std::vector<VkExtensionProperties> deviceSupportedExtensions(
-        static_cast<size_t>(deviceSupportedExtensionsCount));
-    result = vkEnumerateDeviceExtensionProperties(
-        physicalDevice, nullptr, &deviceSupportedExtensionsCount,
-        deviceSupportedExtensions.data());
-    LogVulkanError("error getting available device extensions", result);
-
-    LogDebug("Physical Device Supported Extensions:");
-    for (const auto properties : deviceSupportedExtensions)
-    {
-        LogDebug(fmt::format("\t{}", properties.extensionName));
-    }
-
-    for (const auto& extension : deviceSupportedExtensions)
-    {
-        // https://vulkan.lunarg.com/doc/view/1.3.250.1/mac/1.3-extensions/vkspec.html#VUID-VkDeviceCreateInfo-pProperties-04451
-        if (!strcmp(
-                extension.extensionName,
-                VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME))
-        {
-            deviceExtensions.push_back(
-                VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
-        }
-    }
-
-    return deviceExtensions;
-}
-
-VkSurfaceCapabilitiesKHR Video::GetSurfaceCapabilities()
-{
-    VkResult result;
-    VkSurfaceCapabilitiesKHR surfaceCapabilities;
-
-    result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-        m_PhysicalDevice, m_Surface(), &surfaceCapabilities);
-
-    LogDebug(fmt::format(
-        "Surface capabiltiies:\t{}", surfaceCapabilities.currentExtent));
-    return surfaceCapabilities;
 }
 
 VkSurfaceFormatKHR Video::GetSurfaceFormat()
 {
     return PickSurfaceFormat(
-        GetCompatableSurfaceFormats(), VK_FORMAT_B8G8R8A8_UNORM);
-}
-
-const std::vector<VkSurfaceFormatKHR> Video::GetCompatableSurfaceFormats()
-{
-    VkResult result;
-    uint32_t surfaceFormatCount = 0;
-    result = vkGetPhysicalDeviceSurfaceFormatsKHR(
-        m_PhysicalDevice, m_Surface(), &surfaceFormatCount, nullptr);
-    LogVulkanError("Failed to get supported surface format count", result);
-    std::vector<VkSurfaceFormatKHR> surfaceFormats(
-        static_cast<size_t>(surfaceFormatCount));
-    result = vkGetPhysicalDeviceSurfaceFormatsKHR(
-        m_PhysicalDevice, m_Surface(), &surfaceFormatCount,
-        surfaceFormats.data());
-    LogVulkanError(
-        "Failed to get surface formats supported by the device", result);
-
-    LogDebug("Supported Formats:");
-    for (const auto& surfaceFormat : surfaceFormats)
-    {
-        LogDebug(fmt::format(
-            "\t{}, {}", surfaceFormat.colorSpace, surfaceFormat.format));
-    }
-    return surfaceFormats;
+        m_Surface.GetCompatableSurfaceFormats(m_Device),
+        VK_FORMAT_B8G8R8A8_UNORM);
 }
 
 VkSurfaceFormatKHR Video::PickSurfaceFormat(
@@ -776,12 +598,12 @@ std::vector<VkImage> Video::GetSwapchainImages()
     VkResult result;
     uint32_t swapchainImageCount = 0;
     result = vkGetSwapchainImagesKHR(
-        m_Device, m_Swapchain, &swapchainImageCount, nullptr);
+        m_Device(), m_Swapchain, &swapchainImageCount, nullptr);
     LogVulkanError("Failed to get swapchain image count", result);
     std::vector<VkImage> swapchainImages(
         static_cast<size_t>(swapchainImageCount));
     result = vkGetSwapchainImagesKHR(
-        m_Device, m_Swapchain, &swapchainImageCount, swapchainImages.data());
+        m_Device(), m_Swapchain, &swapchainImageCount, swapchainImages.data());
     LogVulkanError("Failed to get swapchain images", result);
     return swapchainImages;
 }
@@ -801,7 +623,7 @@ void Video::CreatePipelineLayout()
         .bindingCount = 1,
         .pBindings = descriptorSetLayoutBindings.data()};
     result = vkCreateDescriptorSetLayout(
-        m_Device, &descriptorSetLayoutCreateInfo, nullptr,
+        m_Device(), &descriptorSetLayoutCreateInfo, nullptr,
         &m_DescriptorSetLayout);
     LogVulkanError("failed to create descriptor set layout", result);
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
@@ -809,13 +631,13 @@ void Video::CreatePipelineLayout()
         .setLayoutCount = 1,
         .pSetLayouts = &m_DescriptorSetLayout};
     result = vkCreatePipelineLayout(
-        m_Device, &pipelineLayoutCreateInfo, nullptr, &m_PipelineLayout);
+        m_Device(), &pipelineLayoutCreateInfo, nullptr, &m_PipelineLayout);
     LogVulkanError("failed to create pipeline layout", result);
 }
 
 VkQueue Video::GetQueue(uint32_t queueFamily, uint32_t index)
 {
     VkQueue queue;
-    vkGetDeviceQueue(m_Device, index, 0, &queue);
+    vkGetDeviceQueue(m_Device(), index, 0, &queue);
     return queue;
 }

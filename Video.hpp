@@ -1,13 +1,13 @@
 #pragma once
 
 #include "Buffer.hpp"
-#include "DeviceQueue.hpp"
-#include "Shader.hpp"
+#include "Device.hpp"
 #include "Instance.hpp"
+#include "Shader.hpp"
+#include "Surface.hpp"
 #include "UniformBuffer.hpp"
 #include "Vertex.hpp"
 #include "Window.hpp"
-#include "Surface.hpp"
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -21,7 +21,6 @@ public:
     void UpdateUnformBuffers(float theta);
 
 private:
-    void CreateDevice();
     void CreateSwapchain();
     void CreateSwapchainImageViews();
     void CreateRenderPass();
@@ -36,28 +35,19 @@ private:
     void CreatePipelineLayout();
 
     std::vector<VkPipelineShaderStageCreateInfo> CreatePipelineShaderStage();
-    std::vector<VkPhysicalDevice> GetPhysicalDevices();
-    std::vector<VkDeviceQueueCreateInfo>
-    GetDeviceQueueCreateInfos(VkPhysicalDevice device);
-    std::vector<const char*> GetDeviceExtentionNames(VkPhysicalDevice device);
-    bool CheckDeviceSupportsPresentation(VkPhysicalDevice device);
-    VkSurfaceCapabilitiesKHR GetSurfaceCapabilities();
     VkSurfaceFormatKHR GetSurfaceFormat();
-    const std::vector<VkSurfaceFormatKHR> GetCompatableSurfaceFormats();
     VkSurfaceFormatKHR PickSurfaceFormat(
         const std::vector<VkSurfaceFormatKHR>& surfaceFormats,
         const VkFormat requestedFormat);
     std::vector<VkImage> GetSwapchainImages();
     VkQueue GetQueue(uint32_t queueFamily, uint32_t index);
 
-    std::vector<DeviceQueue> m_DeviceQueues;
     Window m_Window;
     VulkanInstance m_Instance;
     Surface m_Surface;
     VkSurfaceFormatKHR m_SurfaceFormat;
     VkSurfaceCapabilitiesKHR m_SurfaceCapabilities;
-    VkPhysicalDevice m_PhysicalDevice;
-    VkDevice m_Device;
+    Device m_Device;
     VkSwapchainKHR m_Swapchain;
     std::vector<VkImageView> m_SwapchainImageViews;
     std::vector<VkFramebuffer> m_Framebuffers;
