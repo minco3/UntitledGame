@@ -1,6 +1,7 @@
 #include "Instance.hpp"
 #include "Log.hpp"
 #include <vulkan/vulkan_core.h>
+#include <algorithm>
 
 VulkanInstance::VulkanInstance(const Window& window)
 {
