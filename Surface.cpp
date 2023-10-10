@@ -10,7 +10,7 @@ Surface::Surface(Window& window, VulkanInstance& instance)
     }
 }
 
-VkSurfaceKHR Surface::operator()()
+VkSurfaceKHR& Surface::operator()()
 {
     return m_Surface;
 }

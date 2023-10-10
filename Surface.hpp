@@ -9,7 +9,7 @@ class Surface
 {
     public:
     Surface(Window& window, VulkanInstance& instance);
-    VkSurfaceKHR operator()();
+    VkSurfaceKHR& operator()();
     private:
     VkSurfaceKHR m_Surface;
 };
