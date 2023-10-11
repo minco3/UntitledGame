@@ -51,7 +51,7 @@ public:
         }
         return memoryTypeIndex;
     }
-    friend VkSurfaceCapabilitiesKHR
+    friend void
     Surface::GetSurfaceCapabilities(Device device);
     friend const std::vector<VkSurfaceFormatKHR>
     Surface::GetCompatableSurfaceFormats(Device device);

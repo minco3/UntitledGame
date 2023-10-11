@@ -8,6 +8,7 @@
 #include "UniformBuffer.hpp"
 #include "Vertex.hpp"
 #include "Window.hpp"
+#include "Swapchain.hpp"
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -21,8 +22,6 @@ public:
     void UpdateUnformBuffers(float theta);
 
 private:
-    void CreateSwapchain();
-    void CreateSwapchainImageViews();
     void CreateRenderPass();
     void CreateGraphicsPipeline();
     void CreateFramebuffers();
@@ -35,21 +34,13 @@ private:
     void CreatePipelineLayout();
 
     std::vector<VkPipelineShaderStageCreateInfo> CreatePipelineShaderStage();
-    VkSurfaceFormatKHR GetSurfaceFormat();
-    VkSurfaceFormatKHR PickSurfaceFormat(
-        const std::vector<VkSurfaceFormatKHR>& surfaceFormats,
-        const VkFormat requestedFormat);
-    std::vector<VkImage> GetSwapchainImages();
     VkQueue GetQueue(uint32_t queueFamily, uint32_t index);
 
     Window m_Window;
     VulkanInstance m_Instance;
     Surface m_Surface;
-    VkSurfaceFormatKHR m_SurfaceFormat;
-    VkSurfaceCapabilitiesKHR m_SurfaceCapabilities;
     Device m_Device;
-    VkSwapchainKHR m_Swapchain;
-    std::vector<VkImageView> m_SwapchainImageViews;
+    Swapchain m_Swapchain;
     std::vector<VkFramebuffer> m_Framebuffers;
     std::vector<Shader> m_Shaders;
     VkRenderPass m_RenderPass;

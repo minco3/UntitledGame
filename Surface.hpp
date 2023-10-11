@@ -6,6 +6,7 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+// ugly forward decl
 class Device;
 
 class Surface
@@ -13,9 +14,16 @@ class Surface
 public:
     Surface(Window& window, VulkanInstance& instance);
     VkSurfaceKHR& operator()();
-    VkSurfaceCapabilitiesKHR GetSurfaceCapabilities(Device device);
+    void GetSurfaceCapabilities(Device device);
     const std::vector<VkSurfaceFormatKHR>
     GetCompatableSurfaceFormats(Device device);
+    void GetSurfaceFormat(Device device);
+    VkSurfaceFormatKHR PickSurfaceFormat(
+        const std::vector<VkSurfaceFormatKHR>& surfaceFormats,
+        const VkFormat requestedFormat);
+
+    VkSurfaceCapabilitiesKHR surfaceCapabilities;
+    VkSurfaceFormatKHR surfaceFormat;
 
 private:
     VkSurfaceKHR m_Surface;

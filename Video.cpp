@@ -18,11 +18,9 @@ Video::Video()
           "Untitled Game", {SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED},
           {1200, 800}, SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN),
       m_Instance(m_Window), m_Surface(m_Window, m_Instance),
-      m_Device(m_Instance(), m_Surface)
+      m_Device(m_Instance(), m_Surface), m_Swapchain(m_Device, m_Surface)
 {
-    m_SurfaceCapabilities = m_Surface.GetSurfaceCapabilities(m_Device);
-    CreateSwapchain();
-    CreateSwapchainImageViews();
+
     CreatePipelineLayout();
     CreateRenderPass();
     CreateGraphicsPipeline();
@@ -54,7 +52,7 @@ Video::~Video()
     {
         vkFreeMemory(m_Device(), uniformBufferMemory, nullptr);
     }
-    for (VkImageView imageView : m_SwapchainImageViews)
+    for (VkImageView imageView : m_Swapchain.m_SwapchainImageViews)
     {
         vkDestroyImageView(m_Device(), imageView, nullptr);
     }
@@ -71,7 +69,7 @@ Video::~Video()
     {
         shader.DestroyShaderModules();
     }
-    vkDestroySwapchainKHR(m_Device(), m_Swapchain, nullptr);
+    vkDestroySwapchainKHR(m_Device(), m_Swapchain(), nullptr);
     vkDestroyPipeline(m_Device(), m_Pipeline, nullptr);
     vkDestroyDevice(m_Device(), nullptr);
     vkDestroySurfaceKHR(m_Instance(), m_Surface(), nullptr);
@@ -85,7 +83,7 @@ void Video::Render()
         m_Device(), 1, &m_Fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
     vkResetFences(m_Device(), 1, &m_Fence);
     result = vkAcquireNextImageKHR(
-        m_Device(), m_Swapchain, std::numeric_limits<uint64_t>::max(),
+        m_Device(), m_Swapchain(), std::numeric_limits<uint64_t>::max(),
         m_Semaphore, VK_NULL_HANDLE, &m_ImageIndex);
     LogVulkanError("failed to aquire next image", result);
 
@@ -99,7 +97,7 @@ void Video::Render()
         .renderPass = m_RenderPass,
         .framebuffer = m_Framebuffers.at(m_ImageIndex),
         .renderArea =
-            {.offset = {0, 0}, .extent = m_SurfaceCapabilities.currentExtent},
+            {.offset = {0, 0}, .extent = m_Surface.surfaceCapabilities.currentExtent},
         .clearValueCount = 1,
         .pClearValues = &clearValue};
 
@@ -151,7 +149,7 @@ void Video::Render()
         .waitSemaphoreCount = 1,
         .pWaitSemaphores = &m_RenderSemaphore,
         .swapchainCount = 1,
-        .pSwapchains = &m_Swapchain,
+        .pSwapchains = &m_Swapchain(),
         .pImageIndices = &m_ImageIndex};
     result = vkQueuePresentKHR(m_Queue, &presentInfo);
     LogVulkanError("failed to present queue", result);
@@ -168,62 +166,6 @@ void Video::UpdateUnformBuffers(float theta)
     ubo.rotation[1].y = cos(theta * M_PI / 180);
     ubo.colorRotation = theta;
     *buffer = ubo;
-}
-
-void Video::CreateSwapchain()
-{
-    VkResult result;
-    m_SurfaceFormat = GetSurfaceFormat();
-    VkSwapchainCreateInfoKHR swapchainCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .surface = m_Surface(),
-        .minImageCount = m_SurfaceCapabilities.minImageCount + 1,
-        .imageFormat = m_SurfaceFormat.format,
-        .imageColorSpace = m_SurfaceFormat.colorSpace,
-        .imageExtent = m_SurfaceCapabilities.currentExtent,
-        .imageArrayLayers = 1,
-        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                      VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-        .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
-        .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
-        .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-        .presentMode = VK_PRESENT_MODE_FIFO_KHR,
-        .clipped = true};
-
-    result = vkCreateSwapchainKHR(
-        m_Device(), &swapchainCreateInfo, nullptr, &m_Swapchain);
-    LogVulkanError("Failed to create swapchain", result);
-}
-
-void Video::CreateSwapchainImageViews()
-{
-    VkResult result;
-    std::vector<VkImage> swapchainImages = GetSwapchainImages();
-    m_SwapchainImageViews.resize(swapchainImages.size());
-    for (size_t i = 0; i < swapchainImages.size(); i++)
-    {
-        VkImageView& swapchainImageView = m_SwapchainImageViews.at(i);
-        VkImageViewCreateInfo swapchainImageViewCreateInfo = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = swapchainImages.at(i),
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = m_SurfaceFormat.format,
-            .components =
-                {.r = VK_COMPONENT_SWIZZLE_IDENTITY,
-                 .g = VK_COMPONENT_SWIZZLE_IDENTITY,
-                 .b = VK_COMPONENT_SWIZZLE_IDENTITY,
-                 .a = VK_COMPONENT_SWIZZLE_IDENTITY},
-            .subresourceRange = {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .baseMipLevel = 0,
-                .levelCount = 1,
-                .baseArrayLayer = 0,
-                .layerCount = 1}};
-        result = vkCreateImageView(
-            m_Device(), &swapchainImageViewCreateInfo, nullptr,
-            &swapchainImageView);
-        LogVulkanError("Failed to create swapchain image view", result);
-    }
 }
 
 // ugly ugly ugly
@@ -251,7 +193,7 @@ void Video::CreateRenderPass()
 {
     VkResult result;
     VkAttachmentDescription colorAttachment = {
-        .format = m_SurfaceFormat.format,
+        .format = m_Surface.surfaceFormat.format,
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -315,14 +257,14 @@ void Video::CreateGraphicsPipeline()
     VkViewport viewport = {
         .x = 0.0f,
         .y = 0.0f,
-        .width = static_cast<float>(m_SurfaceCapabilities.currentExtent.width),
+        .width = static_cast<float>(m_Surface.surfaceCapabilities.currentExtent.width),
         .height =
-            static_cast<float>(m_SurfaceCapabilities.currentExtent.height),
+            static_cast<float>(m_Surface.surfaceCapabilities.currentExtent.height),
         .minDepth = 0.0f,
         .maxDepth = 1.0f};
 
     VkRect2D scissor = {
-        .offset = {0, 0}, .extent = m_SurfaceCapabilities.currentExtent};
+        .offset = {0, 0}, .extent = m_Surface.surfaceCapabilities.currentExtent};
 
     VkPipelineViewportStateCreateInfo viewportState = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
@@ -397,18 +339,18 @@ void Video::CreateGraphicsPipeline()
 void Video::CreateFramebuffers()
 {
     VkResult result;
-    assert(m_SwapchainImageViews.size() > 0);
-    m_Framebuffers.resize(m_SwapchainImageViews.size());
-    for (size_t i = 0; i < m_SwapchainImageViews.size(); i++)
+    assert(m_Swapchain.m_SwapchainImageViews.size() > 0);
+    m_Framebuffers.resize(m_Swapchain.m_SwapchainImageViews.size());
+    for (size_t i = 0; i < m_Swapchain.m_SwapchainImageViews.size(); i++)
     {
         VkFramebuffer& framebuffer = m_Framebuffers.at(i);
         VkFramebufferCreateInfo framebufferCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
             .renderPass = m_RenderPass,
             .attachmentCount = 1,
-            .pAttachments = &m_SwapchainImageViews.at(i),
-            .width = m_SurfaceCapabilities.currentExtent.width,
-            .height = m_SurfaceCapabilities.currentExtent.height,
+            .pAttachments = &m_Swapchain.m_SwapchainImageViews.at(i),
+            .width = m_Surface.surfaceCapabilities.currentExtent.width,
+            .height = m_Surface.surfaceCapabilities.currentExtent.height,
             .layers = 1};
 
         result = vkCreateFramebuffer(
@@ -460,9 +402,9 @@ void Video::CreateVertexBuffer()
 void Video::CreateUniformBuffers()
 {
     VkResult result;
-    m_UniformBuffers.resize(m_SwapchainImageViews.size());
-    m_UniformBufferMemoryMapped.resize(m_SwapchainImageViews.size());
-    m_UniformBufferMemory.resize(m_SwapchainImageViews.size());
+    m_UniformBuffers.resize(m_Swapchain.m_SwapchainImageViews.size());
+    m_UniformBufferMemoryMapped.resize(m_Swapchain.m_SwapchainImageViews.size());
+    m_UniformBufferMemory.resize(m_Swapchain.m_SwapchainImageViews.size());
     for (size_t i = 0; i < m_UniformBuffers.size(); i++)
     {
         m_UniformBuffers.at(i).Create(
@@ -484,14 +426,14 @@ void Video::CreateDescriptorPool()
     VkResult result;
     VkDescriptorPoolSize poolSize = {
         .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = static_cast<uint32_t>(m_SwapchainImageViews.size())};
+        .descriptorCount = static_cast<uint32_t>(m_Swapchain.m_SwapchainImageViews.size())};
 
     VkDescriptorPoolCreateInfo poolInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         .poolSizeCount = 1,
         .pPoolSizes = &poolSize};
 
-    poolInfo.maxSets = static_cast<uint32_t>(m_SwapchainImageViews.size());
+    poolInfo.maxSets = static_cast<uint32_t>(m_Swapchain.m_SwapchainImageViews.size());
     result = vkCreateDescriptorPool(
         m_Device(), &poolInfo, nullptr, &m_DescriptorPool);
     LogVulkanError("Failed to create descriptor pool", result);
@@ -501,19 +443,19 @@ void Video::CreateDescriptorSets()
 {
     VkResult result;
     std::vector<VkDescriptorSetLayout> layouts(
-        m_SwapchainImageViews.size(), m_DescriptorSetLayout);
+        m_Swapchain.m_SwapchainImageViews.size(), m_DescriptorSetLayout);
     VkDescriptorSetAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
         .descriptorPool = m_DescriptorPool,
         .descriptorSetCount =
-            static_cast<uint32_t>(m_SwapchainImageViews.size()),
+            static_cast<uint32_t>(m_Swapchain.m_SwapchainImageViews.size()),
         .pSetLayouts = layouts.data()};
 
-    m_DescriptorSets.resize(m_SwapchainImageViews.size());
+    m_DescriptorSets.resize(m_Swapchain.m_SwapchainImageViews.size());
     result = vkAllocateDescriptorSets(
         m_Device(), &allocInfo, m_DescriptorSets.data());
 
-    for (size_t i = 0; i < m_SwapchainImageViews.size(); i++)
+    for (size_t i = 0; i < m_Swapchain.m_SwapchainImageViews.size(); i++)
     {
         VkDescriptorBufferInfo bufferInfo = {
             .buffer = m_UniformBuffers.at(i)(),
@@ -549,63 +491,6 @@ void Video::CreateMemoryBarriers()
         .flags = VK_FENCE_CREATE_SIGNALED_BIT};
     result = vkCreateFence(m_Device(), &fenceCreateInfo, nullptr, &m_Fence);
     LogVulkanError("failed to create fence", result);
-}
-
-VkSurfaceFormatKHR Video::GetSurfaceFormat()
-{
-    return PickSurfaceFormat(
-        m_Surface.GetCompatableSurfaceFormats(m_Device),
-        VK_FORMAT_B8G8R8A8_UNORM);
-}
-
-VkSurfaceFormatKHR Video::PickSurfaceFormat(
-    const std::vector<VkSurfaceFormatKHR>& surfaceFormats,
-    const VkFormat requestedFormat)
-{
-    VkSurfaceFormatKHR surfaceFormat = {
-        .format = VK_FORMAT_UNDEFINED,
-        .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
-    if (surfaceFormats.size() == 1 &&
-        surfaceFormats.at(0).format == VK_FORMAT_UNDEFINED)
-    {
-        surfaceFormat = {
-            .format = VK_FORMAT_R8G8B8A8_UNORM,
-            .colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR};
-    }
-    else if (
-        std::find_if(
-            surfaceFormats.begin(), surfaceFormats.end(),
-            [requestedFormat](VkSurfaceFormatKHR surfaceFormat) {
-                return surfaceFormat.format == requestedFormat;
-            }) != surfaceFormats.end())
-    {
-        surfaceFormat.format = requestedFormat;
-    }
-
-    // fallback
-    if (surfaceFormat.format == VK_FORMAT_UNDEFINED)
-    {
-        surfaceFormat = surfaceFormats.at(0);
-        LogWarning(fmt::format(
-            "Requested format not found! Falling back to: {} {}",
-            surfaceFormat.format, surfaceFormat.colorSpace));
-    }
-    return surfaceFormat;
-}
-
-std::vector<VkImage> Video::GetSwapchainImages()
-{
-    VkResult result;
-    uint32_t swapchainImageCount = 0;
-    result = vkGetSwapchainImagesKHR(
-        m_Device(), m_Swapchain, &swapchainImageCount, nullptr);
-    LogVulkanError("Failed to get swapchain image count", result);
-    std::vector<VkImage> swapchainImages(
-        static_cast<size_t>(swapchainImageCount));
-    result = vkGetSwapchainImagesKHR(
-        m_Device(), m_Swapchain, &swapchainImageCount, swapchainImages.data());
-    LogVulkanError("Failed to get swapchain images", result);
-    return swapchainImages;
 }
 
 void Video::CreatePipelineLayout()
