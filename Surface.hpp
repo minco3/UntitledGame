@@ -13,7 +13,7 @@ class Surface
 {
 public:
     Surface(Window& window, VulkanInstance& instance);
-    VkSurfaceKHR& operator()();
+    VkSurfaceKHR operator()();
     void GetSurfaceCapabilities(Device device);
     const std::vector<VkSurfaceFormatKHR>
     GetCompatableSurfaceFormats(Device device);

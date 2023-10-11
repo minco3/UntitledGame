@@ -11,7 +11,7 @@ Surface::Surface(Window& window, VulkanInstance& instance)
     }
 }
 
-VkSurfaceKHR& Surface::operator()() { return m_Surface; }
+VkSurfaceKHR Surface::operator()() { return m_Surface; }
 
 void Surface::GetSurfaceCapabilities(Device device)
 {
