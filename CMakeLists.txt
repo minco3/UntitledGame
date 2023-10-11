@@ -34,7 +34,7 @@ foreach(shader_file ${shader_files})
     list(APPEND SPV_SHADERS ${SHADER_DIR}/shaders/${FILENAME}.spv)
 endforeach()
 
-add_executable(UntitledGame main.cpp ${source_files} ${SHADERS})
+add_executable(UntitledGame main.cpp ${source_files})
 add_dependencies(UntitledGame shaders)
 target_link_libraries(UntitledGame SDL2::SDL2main)
 target_link_libraries(UntitledGame SDL2::SDL2)
