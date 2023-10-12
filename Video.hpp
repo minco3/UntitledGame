@@ -4,7 +4,6 @@
 #include "Shader.hpp"
 #include "Window.hpp"
 #include <vector>
-#include <array>
 #include <vulkan/vulkan.h>
 
 class Video
@@ -14,18 +13,21 @@ public:
     ~Video();
 
     void Render();
+    void UpdateUnformBuffers(float theta);
 
 private:
     void CreateInstance();
     void CreateDevice();
     void CreateSwapchain();
     void CreateSwapchainImageViews();
-    void LoadShaders();
     void CreateRenderPass();
     void CreateGraphicsPipeline();
     void CreateFramebuffers();
     void CreateCommandBuffer();
     void CreateVertexBuffer();
+    void CreateUniformBuffers();
+    void CreateDescriptorPool();
+    void CreateDescriptorSets();
     void CreateMemoryBarriers();
     void CreatePipelineLayout();
 
@@ -45,7 +47,15 @@ private:
         const VkFormat requestedFormat);
     std::vector<VkImage> GetSwapchainImages();
     VkQueue GetQueue(uint32_t queueFamily, uint32_t index);
-    VkInstanceCreateFlags GetInstanceCreateFlags(const std::vector<const char *>& extentionNames);
+    VkInstanceCreateFlags
+    GetInstanceCreateFlags(const std::vector<const char*>& extentionNames);
+    uint32_t FindMemoryType(
+        VkMemoryRequirements VkMemoryRequirements,
+        VkMemoryPropertyFlags memoryPropertyFlags);
+    void CreateBuffer(
+        VkDeviceSize bufferSize, VkBufferUsageFlags usageFlags,
+        VkMemoryPropertyFlags propertyFlags, VkDeviceMemory& bufferMemory,
+        VkBuffer& buffer);
 
     std::vector<DeviceQueue> m_DeviceQueues;
     VkInstance m_Instance;
@@ -58,19 +68,24 @@ private:
     VkSwapchainKHR m_Swapchain;
     std::vector<VkImageView> m_SwapchainImageViews;
     std::vector<VkFramebuffer> m_Framebuffers;
-    std::array<Shader, 2> m_ShaderModules = {
-        {{ShaderType::Vertex, "shader.vert.spv"},
-         {ShaderType::Fragment, "shader.frag.spv"}}};
+    std::vector<Shader> m_Shaders;
     VkRenderPass m_RenderPass;
     VkCommandPool m_CommandPool;
     VkCommandBuffer m_CommandBuffer;
     VkBuffer m_VertexBuffer;
+    std::vector<VkBuffer> m_UniformBuffers;
+    std::vector<VkDeviceMemory> m_UniformBufferMemory;
+    std::vector<void*> m_UniformBufferMemoryMapped;
     VkDeviceMemory m_VertexBufferMemory;
     uint32_t m_QueueFamilyIndex = 0;
     VkQueue m_Queue;
     VkPipeline m_Pipeline;
+    VkDescriptorPool m_DescriptorPool;
+    std::vector<VkDescriptorSet> m_DescriptorSets;
+    VkDescriptorSetLayout m_DescriptorSetLayout;
     VkPipelineLayout m_PipelineLayout;
     VkSemaphore m_Semaphore;
     VkSemaphore m_RenderSemaphore;
     VkFence m_Fence;
+    uint32_t m_ImageIndex = 0;
 };

@@ -12,4 +12,5 @@ public:
 private:
     Video m_Video;
     bool m_Running;
+    float m_Theta;
 };
