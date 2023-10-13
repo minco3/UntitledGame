@@ -2,7 +2,7 @@
 #include "DeviceQueue.hpp"
 #include "Log.hpp"
 #include "Surface.hpp"
-#include "vulkan/vulkan_core.h"
+#include "vulkan/vulkan_raii.hpp"
 #include <vector>
 
 class Device
