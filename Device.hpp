@@ -8,19 +8,20 @@
 class Device
 {
 public:
-    Device(VkInstance& instance, Surface surface);
-    std::vector<VkPhysicalDevice> GetPhysicalDevices(VkInstance instance);
-    std::vector<VkDeviceQueueCreateInfo>
+    Device(vk::raii::Instance& instance, Surface surface);
+    std::vector<vk::raii::PhysicalDevice>
+    GetPhysicalDevices(vk::raii::Instance& instance);
+    std::vector<vk::DeviceQueueCreateInfo>
     GetDeviceQueueCreateInfos(Surface surface);
     std::vector<const char*> GetDeviceExtentionNames();
-    VkDevice& operator()();
+    vk::raii::Device& operator()();
     uint32_t FindMemoryType(
-        VkMemoryRequirements memoryRequirements,
-        VkMemoryPropertyFlags memoryPropertyFlags)
+        vk::MemoryRequirements memoryRequirements,
+        vk::MemoryPropertyFlags memoryPropertyFlags)
     {
-        VkPhysicalDeviceMemoryProperties memoryProperties;
-        vkGetPhysicalDeviceMemoryProperties(
-            m_PhysicalDevice, &memoryProperties);
+
+        vk::PhysicalDeviceMemoryProperties memoryProperties =
+            m_PhysicalDevice.getMemoryProperties();
 
         uint32_t memoryTypeIndex;
 
@@ -51,13 +52,12 @@ public:
         }
         return memoryTypeIndex;
     }
-    friend void
-    Surface::GetSurfaceCapabilities(Device device);
+    friend void Surface::GetSurfaceCapabilities(Device device);
     friend const std::vector<VkSurfaceFormatKHR>
     Surface::GetCompatableSurfaceFormats(Device device);
 
 private:
-    VkDevice m_Device;
-    VkPhysicalDevice m_PhysicalDevice;
+    vk::raii::Device m_Device;
+    vk::raii::PhysicalDevice m_PhysicalDevice;
     std::vector<DeviceQueue> m_DeviceQueues;
 };

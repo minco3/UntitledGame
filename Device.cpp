@@ -1,15 +1,16 @@
 #include "Device.hpp"
 #include "vulkan/vulkan_beta.h"
 
-Device::Device(VkInstance& instance, Surface surface)
+Device::Device(vk::raii::Instance& instance, Surface surface)
 {
     VkResult result;
-    std::vector<VkPhysicalDevice> physicalDevices = GetPhysicalDevices(instance);
-    m_PhysicalDevice = physicalDevices[0];
+    std::vector<vk::raii::PhysicalDevice> physicalDevices =
+        instance.enumeratePhysicalDevices();
+    assert(physicalDevices.size() != 0);
+    m_PhysicalDevice = physicalDevices.at(0);
     std::vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos =
         GetDeviceQueueCreateInfos(surface);
-    std::vector<const char*> deviceExtensions =
-        GetDeviceExtentionNames();
+    std::vector<const char*> deviceExtensions = GetDeviceExtentionNames();
 
     VkDeviceCreateInfo deviceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -53,60 +54,39 @@ std::vector<VkPhysicalDevice> Device::GetPhysicalDevices(VkInstance instance)
     return physicalDevices;
 }
 
-std::vector<VkDeviceQueueCreateInfo> Device::GetDeviceQueueCreateInfos(Surface surface)
+std::vector<vk::DeviceQueueCreateInfo>
+Device::GetDeviceQueueCreateInfos(Surface surface)
 {
-    VkResult result;
-    uint32_t queueFamilyPropertyCount = 0;
+    std::vector<vk::QueueFamilyProperties> queueFamilyProperties =
+        m_PhysicalDevice.getQueueFamilyProperties();
 
-    vkGetPhysicalDeviceQueueFamilyProperties(
-        m_PhysicalDevice, &queueFamilyPropertyCount, nullptr);
-    if (queueFamilyPropertyCount == 0)
-    {
-        LogError("No physical device queues found");
-    }
-    std::vector<VkQueueFamilyProperties> queueFamilyProperties(
-        queueFamilyPropertyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(
-        m_PhysicalDevice, &queueFamilyPropertyCount,
-        queueFamilyProperties.data());
-
-    std::vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos(
-        static_cast<size_t>(queueFamilyPropertyCount));
+    std::vector<vk::DeviceQueueCreateInfo> deviceQueueCreateInfos;
+    deviceQueueCreateInfos.reserve(queueFamilyProperties.size());
 
     m_DeviceQueues.resize(
-        queueFamilyPropertyCount, {{std::vector<float>{1.0f}}});
+        queueFamilyProperties.size(), {{std::vector<float>{1.0f}}});
 
     LogDebug("Queues:");
-    for (uint32_t i = 0; i < queueFamilyPropertyCount; i++)
+    for (uint32_t i = 0; i < queueFamilyProperties.size(); i++)
     {
         const VkQueueFamilyProperties& properties = queueFamilyProperties.at(i);
 
-        result = vkGetPhysicalDeviceSurfaceSupportKHR(
-            m_PhysicalDevice, i, surface(),
-            &m_DeviceQueues.at(i).m_PresentationSupported);
-        LogVulkanError(
-            fmt::format(
-                "Failed to check whether queue {} supports presentation", i),
-            result);
+        m_DeviceQueues.at(i).m_PresentationSupported =
+            m_PhysicalDevice.getSurfaceSupportKHR(i, surface());
 
         LogDebug(fmt::format(
             "\tQueue Family [{}]: {:#b} {} {}", i, properties.queueFlags,
             properties.queueCount,
             static_cast<bool>(m_DeviceQueues.at(i).m_PresentationSupported)));
 
-        VkDeviceQueueCreateInfo deviceQueueCreateInfo = {
-            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-            .queueFamilyIndex = i,
-            .queueCount = 1,
-            .pQueuePriorities = m_DeviceQueues.at(i).m_Priorities.data()};
-        deviceQueueCreateInfos.at(i) = (deviceQueueCreateInfo);
+        deviceQueueCreateInfos.emplace_back(0, i, m_DeviceQueues.at(i).m_Priorities);
     }
     return deviceQueueCreateInfos;
 }
 
 std::vector<const char*> Device::GetDeviceExtentionNames()
 {
-VkResult result;
+    VkResult result;
     uint32_t deviceSupportedExtensionsCount = 0;
     std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME};
@@ -143,7 +123,4 @@ VkResult result;
     return deviceExtensions;
 }
 
-VkDevice& Device::operator()()
-{
-    return m_Device;
-}
+VkDevice& Device::operator()() { return m_Device; }
