@@ -13,18 +13,19 @@ class Surface
 {
 public:
     Surface(Window& window, VulkanInstance& instance);
-    VkSurfaceKHR operator()();
+    vk::raii::SurfaceKHR& operator()();
     void GetSurfaceCapabilities(Device device);
-    const std::vector<VkSurfaceFormatKHR>
+    const std::vector<vk::SurfaceFormatKHR>
     GetCompatableSurfaceFormats(Device device);
     void GetSurfaceFormat(Device device);
-    VkSurfaceFormatKHR PickSurfaceFormat(
+    vk::SurfaceFormatKHR PickSurfaceFormat(
         const std::vector<VkSurfaceFormatKHR>& surfaceFormats,
         const VkFormat requestedFormat);
 
-    VkSurfaceCapabilitiesKHR surfaceCapabilities;
-    VkSurfaceFormatKHR surfaceFormat;
+    vk::SurfaceCapabilitiesKHR surfaceCapabilities;
+    vk::SurfaceFormatKHR surfaceFormat;
 
 private:
-    VkSurfaceKHR m_Surface;
+    VkSurfaceKHR createSDLVulkanSurface(Window& window, VulkanInstance& instance);
+    vk::raii::SurfaceKHR m_Surface;
 };

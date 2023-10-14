@@ -9,5 +9,5 @@ public:
     DeviceQueue(const std::vector<float>& priorities);
 
     std::vector<float> m_Priorities;
-    VkBool32 m_PresentationSupported;
+    vk::Bool32 m_PresentationSupported;
 };

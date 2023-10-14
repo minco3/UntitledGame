@@ -3,15 +3,23 @@
 #include <algorithm>
 
 Surface::Surface(Window& window, VulkanInstance& instance)
+    : m_Surface(instance(), createSDLVulkanSurface(window, instance))
 {
-    if (SDL_Vulkan_CreateSurface(window(), instance(), &m_Surface) != SDL_TRUE)
+}
+
+VkSurfaceKHR createSDLVulkanSurface(Window& window, VulkanInstance& instance)
+{
+    VkSurfaceKHR surface;
+    if (SDL_Vulkan_CreateSurface(window(), static_cast<VkInstance>(*instance()), &surface) != SDL_TRUE)
     {
         LogError(
             fmt::format("Could not create SDL surface: {}", SDL_GetError()));
     }
+    return surface;
 }
 
-VkSurfaceKHR Surface::operator()() { return m_Surface; }
+
+vk::raii::SurfaceKHR& Surface::operator()() { return m_Surface; }
 
 void Surface::GetSurfaceCapabilities(Device device)
 {
