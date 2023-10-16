@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <filesystem>
 
-std::vector<Shader> LoadShaders(VkDevice device)
+std::vector<Shader> LoadShaders(vk::raii::Device device)
 {
     std::vector<Shader> shaders;
     std::filesystem::path shader_directory =

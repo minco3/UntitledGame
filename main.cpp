@@ -16,14 +16,14 @@ int main(int argc, char** argv)
         Application app;
         app.Run();
     }
-    catch (std::exception& e)
-    {
-        LogError(fmt::format("std::exception: {}\n", e.what()));
-        exit(-1);
-    }
     catch (vk::SystemError& e)
     {
         LogError(fmt::format("Vulkan Error: {}\n", e.what()));
+        exit(-1);
+    }
+    catch (std::exception& e)
+    {
+        LogError(fmt::format("std::exception: {}\n", e.what()));
         exit(-1);
     }
     catch( ... )
