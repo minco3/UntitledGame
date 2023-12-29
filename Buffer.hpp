@@ -2,48 +2,43 @@
 
 #include "Device.hpp"
 #include "Log.hpp"
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan_raii.hpp>
 
 template <typename T> class Buffer
 {
 public:
-    Buffer(){};
-    void Create(
-        Device device, size_t count, VkBufferUsageFlags usageFlags,
-        VkMemoryPropertyFlags memoryPropertyFlags, VkDeviceMemory& bufferMemory)
+    Buffer(
+        Device& device, size_t count, vk::BufferUsageFlags usageFlags,
+        vk::MemoryPropertyFlags memoryPropertyFlags,
+        vk::raii::DeviceMemory& bufferMemory)
+        : m_Buffer(
+              device.Get(), {{},
+                             sizeof(T) * m_Count,
+                             usageFlags,
+                             vk::SharingMode::eExclusive,
+                             0,
+                             nullptr}),
+          m_Count(count)
     {
-        m_Count = count;
-        VkResult result;
-        VkBufferCreateInfo bufferCreateInfo = {
-            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .size = sizeof(T) * m_Count,
-            .usage = usageFlags,
-            .sharingMode = VK_SHARING_MODE_EXCLUSIVE};
-        result =
-            vkCreateBuffer(device(), &bufferCreateInfo, nullptr, &m_Buffer);
-        LogVulkanError("failed to create vertex buffer", result);
 
-        VkMemoryRequirements memoryRequirements;
-        vkGetBufferMemoryRequirements(device(), m_Buffer, &memoryRequirements);
+        vk::MemoryRequirements memoryRequirements =
+            m_Buffer.getMemoryRequirements();
+
         uint32_t memoryTypeIndex =
             device.FindMemoryType(memoryRequirements, memoryPropertyFlags);
 
-        VkMemoryAllocateInfo memoryAllocateInfo = {
-            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-            .allocationSize = memoryRequirements.size,
-            .memoryTypeIndex = memoryTypeIndex};
+        vk::MemoryAllocateInfo memoryAllocateInfo(
+            memoryRequirements.size, memoryTypeIndex);
 
-        result = vkAllocateMemory(
-            device(), &memoryAllocateInfo, nullptr, &bufferMemory);
-        LogVulkanError("failed to allocate buffer memory", result);
+        bufferMemory = device.Get().allocateMemory(memoryAllocateInfo);
 
-        result = vkBindBufferMemory(device(), m_Buffer, bufferMemory, 0);
-        LogVulkanError("failed to bind buffer memory", result);
+        m_Buffer.bindMemory(*bufferMemory, 0);
     }
+    Buffer(const Buffer&) = delete;
     constexpr size_t size() { return sizeof(T) * m_Count; }
-    constexpr VkBuffer& operator()() { return m_Buffer; }
+    constexpr vk::raii::Buffer& Get() { return m_Buffer; }
 
 private:
-    VkBuffer m_Buffer;
     size_t m_Count;
+    vk::raii::Buffer m_Buffer;
 };

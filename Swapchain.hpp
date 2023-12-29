@@ -1,18 +1,25 @@
 #pragma once
 #include "Device.hpp"
 #include "Surface.hpp"
-#include "vulkan/vulkan_core.h"
+#include <vulkan/vulkan_raii.hpp>
 #include <vector>
 
 class Swapchain
 {
 public:
-    Swapchain(Device& device, Surface& surface);
-    VkSwapchainKHR& operator()();
-    std::vector<VkImageView> m_SwapchainImageViews;
+    Swapchain(vk::raii::Device& device, vk::raii::SurfaceKHR& surface,
+    vk::SurfaceCapabilitiesKHR& surfaceCapabilities,
+    vk::SurfaceFormatKHR& surfaceFormat);
+    std::vector<vk::raii::ImageView>& GetImageViews();
+    vk::Extent2D GetExtent();
+    vk::raii::SwapchainKHR& Get();
+
 private:
-    void CreateSwapchain(Device& device, Surface& surface);
-    void CreateSwapchainImageViews(Device& device, Surface& surface);
-    std::vector<VkImage> GetSwapchainImages(Device& device);
-    VkSwapchainKHR m_Swapchain;
+    std::vector<vk::raii::ImageView> m_SwapchainImageViews;
+    vk::SwapchainCreateInfoKHR GetCreateInfo(
+        vk::raii::Device& device, vk::raii::SurfaceKHR& surface,
+        vk::SurfaceCapabilitiesKHR& surfaceCapabilities,
+        vk::SurfaceFormatKHR& surfaceFormat);
+    void CreateSwapchainImageViews(vk::raii::Device& device, vk::SurfaceFormatKHR surfaceFormat);
+    vk::raii::SwapchainKHR m_Swapchain;
 };

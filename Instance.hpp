@@ -6,7 +6,7 @@
 class VulkanInstance
 {
 public:
-    VulkanInstance(const Window& window, vk::raii::Context context);
+    VulkanInstance(const Window& window, vk::raii::Context& context);
     vk::raii::Instance& operator()() { return m_Instance; }
 
 private:

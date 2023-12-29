@@ -2,33 +2,25 @@
 
 #include <fmt/core.h>
 #include <fmt/format.h>
-#include <vulkan/vk_enum_string_helper.h>
+#include <vulkan/vulkan.hpp>
 
-template <> struct fmt::formatter<VkFormat>: formatter<string_view>
+template <> struct fmt::formatter<vk::Format>: formatter<string_view>
 {
-    auto format(VkFormat format, format_context& ctx) const
+    auto format(vk::Format format, format_context& ctx) const
     {
-        string_view formatString = string_VkFormat(format);
+        string_view formatString = vk::to_string(format);
         return formatter<string_view>::format(formatString, ctx);
     }
 };
-template <> struct fmt::formatter<VkColorSpaceKHR>: formatter<string_view>
+template <> struct fmt::formatter<vk::ColorSpaceKHR>: formatter<string_view>
 {
-        auto format(VkColorSpaceKHR colorSpace, format_context& ctx) const
+        auto format(vk::ColorSpaceKHR colorSpace, format_context& ctx) const
     {
-        string_view colorSpaceString = string_VkColorSpaceKHR(colorSpace);
+        string_view colorSpaceString = vk::to_string(colorSpace);
         return formatter<string_view>::format(colorSpaceString, ctx);
     }
 };
-template <> struct fmt::formatter<VkResult>: formatter<string_view>
-{
-        auto format(VkResult result, format_context& ctx) const
-    {
-        string_view resultString = string_VkResult(result);
-        return formatter<string_view>::format(resultString, ctx);
-    }
-};
-template <> struct fmt::formatter<VkExtent2D>
+template <> struct fmt::formatter<vk::Extent2D>
 {
     constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator
     {
@@ -36,7 +28,7 @@ template <> struct fmt::formatter<VkExtent2D>
         if (it != end && *it != '}') throw format_error("invalid format");
         return it;
     }
-    auto format(VkExtent2D extent, format_context& ctx) const -> format_context::iterator
+    auto format(vk::Extent2D extent, format_context& ctx) const -> format_context::iterator
     {
         return format_to(ctx.out(), "{}x{}", extent.width, extent.height);
     }

@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <vulkan/vulkan_core.h>
 
-VulkanInstance::VulkanInstance(const Window& window, vk::raii::Context context)
+VulkanInstance::VulkanInstance(const Window& window, vk::raii::Context& context)
     : m_Instance(context, GetInstanceCreateInfo(window))
 {
 }
@@ -57,7 +57,7 @@ std::vector<const char*> VulkanInstance::GetExtensionNames(const Window& window)
     if (std::find_if(
             instanceSupportedExtensions.begin(),
             instanceSupportedExtensions.end(),
-            [](VkExtensionProperties& properties)
+            [](vk::ExtensionProperties& properties)
             {
                 return !strcmp(
                     properties.extensionName,
@@ -72,7 +72,7 @@ std::vector<const char*> VulkanInstance::GetExtensionNames(const Window& window)
         if (std::find_if(
                 instanceSupportedExtensions.begin(),
                 instanceSupportedExtensions.end(),
-                [extName](VkExtensionProperties& properties) {
+                [extName](vk::ExtensionProperties& properties) {
                     return !strcmp(properties.extensionName, extName);
                 }) == instanceSupportedExtensions.end())
         {

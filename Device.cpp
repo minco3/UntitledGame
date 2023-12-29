@@ -36,13 +36,15 @@ Device::GetDeviceQueueCreateInfos(Surface& surface)
     LogDebug("Queues:");
     for (uint32_t i = 0; i < queueFamilyProperties.size(); i++)
     {
-        const VkQueueFamilyProperties& properties = queueFamilyProperties.at(i);
+        const vk::QueueFamilyProperties& properties = queueFamilyProperties.at(i);
 
         m_DeviceQueues.at(i).m_PresentationSupported =
-            m_PhysicalDevice.getSurfaceSupportKHR(i, *surface());
+            m_PhysicalDevice.getSurfaceSupportKHR(i, *surface.Get());
+
+        //TODO: fix queue flags not being able to be print
 
         LogDebug(fmt::format(
-            "\tQueue Family [{}]: {:#b} {} {}", i, properties.queueFlags,
+            "\tQueue Family [{}]: {:#b} {}", i,
             properties.queueCount,
             static_cast<bool>(m_DeviceQueues.at(i).m_PresentationSupported)));
 
@@ -83,7 +85,7 @@ std::vector<const char*> Device::GetDeviceExtentionNames()
     return deviceExtensions;
 }
 
-vk::raii::Device& Device::operator()() { return m_Device; }
+vk::raii::Device& Device::Get() { return m_Device; }
 
 uint32_t Device::FindMemoryType(
     vk::MemoryRequirements memoryRequirements,
@@ -121,4 +123,24 @@ uint32_t Device::FindMemoryType(
         }
     }
     return memoryTypeIndex;
+}
+
+vk::SurfaceCapabilitiesKHR
+Device::GetSurfaceCapabilities(vk::raii::SurfaceKHR& surface)
+{
+    return m_PhysicalDevice.getSurfaceCapabilitiesKHR(*surface);
+}
+std::vector<vk::SurfaceFormatKHR>
+Device::GetCompatableSurfaceFormats(vk::raii::SurfaceKHR& surface)
+{
+    std::vector<vk::SurfaceFormatKHR> surfaceFormats =
+        m_PhysicalDevice.getSurfaceFormatsKHR(*surface);
+
+    LogDebug("Supported Formats:");
+    for (const auto& surfaceFormat : surfaceFormats)
+    {
+        LogDebug(fmt::format(
+            "\t{}, {}", surfaceFormat.colorSpace, surfaceFormat.format));
+    }
+    return surfaceFormats;
 }

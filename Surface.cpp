@@ -2,15 +2,21 @@
 #include "Device.hpp"
 #include <algorithm>
 
-Surface::Surface(Window& window, VulkanInstance& instance)
-    : m_Surface(instance(), createSDLVulkanSurface(window, instance))
+Surface::Surface(SDL_Window* window, vk::raii::Instance& instance)
+    : m_Surface(instance, createSDLVulkanSurface(window, instance))
 {
 }
 
-VkSurfaceKHR createSDLVulkanSurface(Window& window, VulkanInstance& instance)
+VkSurfaceKHR createSDLVulkanSurface(SDL_Window* window, vk::raii::Instance& instance)
 {
     VkSurfaceKHR surface;
-    if (SDL_Vulkan_CreateSurface(window(), static_cast<VkInstance>(*instance()), &surface) != SDL_TRUE)
+    if (!window)
+    {
+        LogError("Window pointer not initialized correctly");
+    }
+    if (SDL_Vulkan_CreateSurface(
+            window, static_cast<VkInstance>(*instance), &surface) !=
+        SDL_TRUE)
     {
         LogError(
             fmt::format("Could not create SDL surface: {}", SDL_GetError()));
@@ -18,63 +24,34 @@ VkSurfaceKHR createSDLVulkanSurface(Window& window, VulkanInstance& instance)
     return surface;
 }
 
-
-vk::raii::SurfaceKHR& Surface::operator()() { return m_Surface; }
-
-void Surface::GetSurfaceCapabilities(Device device)
+void Surface::GetSurfaceCapabilities(Device& device)
 {
-    VkResult result;
-
-    result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-        device.m_PhysicalDevice, m_Surface, &surfaceCapabilities);
+    surfaceCapabilities = device.GetSurfaceCapabilities(m_Surface);
 
     LogDebug(fmt::format(
         "Surface capabiltiies:\t{}", surfaceCapabilities.currentExtent));
 }
 
-const std::vector<VkSurfaceFormatKHR>
-Surface::GetCompatableSurfaceFormats(Device device)
+const std::vector<vk::SurfaceFormatKHR>
+Surface::GetCompatableSurfaceFormats(Device& device)
 {
-    VkResult result;
-    uint32_t surfaceFormatCount = 0;
-    result = vkGetPhysicalDeviceSurfaceFormatsKHR(
-        device.m_PhysicalDevice, m_Surface, &surfaceFormatCount, nullptr);
-    LogVulkanError("Failed to get supported surface format count", result);
-    std::vector<VkSurfaceFormatKHR> surfaceFormats(
-        static_cast<size_t>(surfaceFormatCount));
-    result = vkGetPhysicalDeviceSurfaceFormatsKHR(
-        device.m_PhysicalDevice, m_Surface, &surfaceFormatCount,
-        surfaceFormats.data());
-    LogVulkanError(
-        "Failed to get surface formats supported by the device", result);
-
-    LogDebug("Supported Formats:");
-    for (const auto& surfaceFormat : surfaceFormats)
-    {
-        LogDebug(fmt::format(
-            "\t{}, {}", surfaceFormat.colorSpace, surfaceFormat.format));
-    }
-    return surfaceFormats;
+    return device.GetCompatableSurfaceFormats(m_Surface);
 }
 
-VkSurfaceFormatKHR Surface::PickSurfaceFormat(
-    const std::vector<VkSurfaceFormatKHR>& surfaceFormats,
-    const VkFormat requestedFormat)
+vk::SurfaceFormatKHR Surface::PickSurfaceFormat(
+    const std::vector<vk::SurfaceFormatKHR>& surfaceFormats,
+    const vk::Format requestedFormat)
 {
-    VkSurfaceFormatKHR surfaceFormat = {
-        .format = VK_FORMAT_UNDEFINED,
-        .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
+    vk::SurfaceFormatKHR surfaceFormat(vk::Format::eUndefined, vk::ColorSpaceKHR::eSrgbNonlinear);
     if (surfaceFormats.size() == 1 &&
-        surfaceFormats.at(0).format == VK_FORMAT_UNDEFINED)
+        surfaceFormats.front().format == vk::Format::eUndefined)
     {
-        surfaceFormat = {
-            .format = VK_FORMAT_R8G8B8A8_UNORM,
-            .colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR};
+        surfaceFormat = {vk::Format::eR8G8B8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};
     }
     else if (
         std::find_if(
             surfaceFormats.begin(), surfaceFormats.end(),
-            [requestedFormat](VkSurfaceFormatKHR surfaceFormat) {
+            [requestedFormat](vk::SurfaceFormatKHR surfaceFormat) {
                 return surfaceFormat.format == requestedFormat;
             }) != surfaceFormats.end())
     {
@@ -82,9 +59,9 @@ VkSurfaceFormatKHR Surface::PickSurfaceFormat(
     }
 
     // fallback
-    if (surfaceFormat.format == VK_FORMAT_UNDEFINED)
+    if (surfaceFormat.format == vk::Format::eUndefined)
     {
-        surfaceFormat = surfaceFormats.at(0);
+        surfaceFormat = surfaceFormats.front();
         LogWarning(fmt::format(
             "Requested format not found! Falling back to: {} {}",
             surfaceFormat.format, surfaceFormat.colorSpace));
@@ -92,8 +69,13 @@ VkSurfaceFormatKHR Surface::PickSurfaceFormat(
     return surfaceFormat;
 }
 
-void Surface::GetSurfaceFormat(Device device)
+vk::raii::SurfaceKHR& Surface::Get()
+{
+    return m_Surface;
+}
+
+void Surface::GetSurfaceFormat(Device& device)
 {
     surfaceFormat = PickSurfaceFormat(
-        GetCompatableSurfaceFormats(device), VK_FORMAT_B8G8R8A8_UNORM);
+        GetCompatableSurfaceFormats(device), vk::Format::eB8G8R8A8Unorm);
 }

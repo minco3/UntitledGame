@@ -5,10 +5,11 @@
 #include "Instance.hpp"
 #include "Shader.hpp"
 #include "Surface.hpp"
+#include "Swapchain.hpp"
+#include "Pipeline.hpp"
 #include "UniformBuffer.hpp"
 #include "Vertex.hpp"
 #include "Window.hpp"
-#include "Swapchain.hpp"
 #include <vector>
 #include <vulkan/vulkan_raii.hpp>
 
@@ -36,6 +37,7 @@ private:
     std::vector<VkPipelineShaderStageCreateInfo> CreatePipelineShaderStage();
     VkQueue GetQueue(uint32_t queueFamily, uint32_t index);
 
+    vk::raii::Context m_Context;
     Window m_Window;
     VulkanInstance m_Instance;
     Surface m_Surface;
@@ -43,9 +45,9 @@ private:
     Swapchain m_Swapchain;
     std::vector<vk::raii::Framebuffer> m_Framebuffers;
     std::vector<Shader> m_Shaders;
-    vk::raii::RenderPass m_RenderPass;
     vk::raii::CommandPool m_CommandPool;
     vk::raii::CommandBuffer m_CommandBuffer;
+    vk::raii::RenderPass m_RenderPass;
     Buffer<Vertex> m_VertexBuffer;
     std::vector<Buffer<UniformBufferObject>> m_UniformBuffers;
     std::vector<vk::raii::DeviceMemory> m_UniformBufferMemory;
@@ -53,7 +55,7 @@ private:
     vk::raii::DeviceMemory m_VertexBufferMemory;
     uint32_t m_QueueFamilyIndex = 0;
     vk::raii::Queue m_Queue;
-    vk::raii::Pipeline m_Pipeline;
+    GraphicsPipeline m_Pipeline;
     vk::raii::DescriptorPool m_DescriptorPool;
     vk::raii::DescriptorSets m_DescriptorSets;
     vk::raii::DescriptorSetLayout m_DescriptorSetLayout;
