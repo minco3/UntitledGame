@@ -7,7 +7,8 @@
 class CommandBuffer
 {
 public:
-    CommandBuffer(Device& device);
+    CommandBuffer(Device& device, uint32_t queueIndex);
 private:
-    vk::raii::CommandBuffer m_CommandBuffer;
+    vk::raii::CommandPool m_CommandPool;
+    vk::raii::CommandBuffers m_CommandBuffers;
 };
