@@ -29,9 +29,9 @@ private:
 
 private:
     vk::raii::DescriptorPool m_DescriptorPool;
+    // probably doesnt need to be a member variable
+    std::vector<vk::DescriptorSetLayoutBinding> m_DescriptorSetLayoutBindings;
     std::vector<vk::raii::DescriptorSetLayout> m_DescriptorSetLayouts;
     vk::raii::DescriptorSets m_DescriptorSets;
 
-    // probably doesnt need to be a member variable
-    std::vector<vk::DescriptorSetLayoutBinding> m_DescriptorSetLayoutBindings;
 };
