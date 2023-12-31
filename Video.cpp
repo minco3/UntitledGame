@@ -71,9 +71,9 @@ void Video::Render()
     commandBuffer.bindPipeline(
         vk::PipelineBindPoint::eGraphics, *m_Pipeline.Get());
 
-    vk::DeviceSize deviceSize = 0;
+    vk::DeviceSize offset = 0;
 
-    commandBuffer.bindVertexBuffers(0, *m_VertexBuffer.Get(), deviceSize);
+    commandBuffer.bindVertexBuffers(0, *m_VertexBuffer.Get(), offset);
 
     commandBuffer.bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics, *m_Pipeline.GetLayout(), 0,
