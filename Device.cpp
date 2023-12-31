@@ -89,6 +89,7 @@ std::vector<const char*> Device::GetDeviceExtentionNames()
 }
 
 vk::raii::Device& Device::Get() { return m_Device; }
+vk::raii::PhysicalDevice& Device::GetPhysicalDevice() { return m_PhysicalDevice; }
 
 uint32_t Device::FindMemoryType(
     vk::MemoryRequirements memoryRequirements,

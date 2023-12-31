@@ -45,9 +45,7 @@ private:
     SyncObjects m_SyncObjects;
     std::vector<Buffer<UniformBufferObject>> m_UniformBuffers;
     uint32_t m_CurrentImage = 0;
-    CommandBuffer m_CommandBuffer;
-    GraphicsPipeline m_Pipeline;
+    CommandBuffer m_CommandBuffers;
     Descriptors m_Descriptors;
-
-    uint32_t m_ImageIndex = 0;
+    GraphicsPipeline m_Pipeline;
 };

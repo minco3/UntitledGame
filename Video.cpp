@@ -25,29 +25,37 @@ Video::Video()
       m_VertexBuffer(
           m_Device, vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer),
       m_UniformBuffers(std::move(ConstructUniformBuffers())),
-      m_Descriptors(m_Device, m_UniformBuffers, m_Swapchain.GetImageCount()),
-      m_Pipeline(m_Device, m_RenderPass, m_Surface, m_Descriptors),
       m_Framebuffers(m_Swapchain, m_RenderPass, m_Device),
-      m_CommandBuffer(m_Device, m_QueueFamilyIndex), m_SyncObjects(m_Device)
+      m_CommandBuffers(
+          m_Device, m_QueueFamilyIndex, m_Swapchain.GetImageCount()),
+      m_SyncObjects(m_Device),
+      m_Descriptors(m_Device, m_UniformBuffers, m_Swapchain.GetImageCount()),
+      m_Pipeline(m_Device, m_RenderPass, m_Surface, m_Descriptors)
 {
     // buffers
     FillVertexBuffer();
 }
-Video::~Video() {}
+Video::~Video()
+{
+    m_Device.Get().waitIdle();
+    m_Queue.waitIdle();
+}
 
 void Video::Render()
 {
     vk::raii::Device& device = m_Device.Get();
     device.waitForFences(
-        *m_SyncObjects.inFlightFences.at(m_CurrentImage), true,
+        *m_SyncObjects.inFlightFences.at(m_CurrentImage), VK_TRUE,
         std::numeric_limits<uint64_t>::max());
-    device.resetFences(*m_SyncObjects.inFlightFences.at(m_CurrentImage));
-    vk::AcquireNextImageInfoKHR nextImageInfo(
-        *m_Swapchain.Get(), std::numeric_limits<uint64_t>::max(),
-        *m_SyncObjects.imageAvailableSemaphores.at(m_CurrentImage));
-    auto [result, m_CurrentImage] = device.acquireNextImage2KHR(nextImageInfo);
 
-    m_CommandBuffer.Get().reset();
+    device.resetFences(*m_SyncObjects.inFlightFences.at(m_CurrentImage));
+    auto [result, imageIndex] = m_Swapchain.Get().acquireNextImage(
+        std::numeric_limits<uint64_t>::max(),
+        *m_SyncObjects.imageAvailableSemaphores.at(m_CurrentImage));
+
+    vk::raii::CommandBuffer& commandBuffer = m_CommandBuffers[m_CurrentImage];
+
+    commandBuffer.reset();
 
     vk::ClearColorValue clearColor(0.0f, 0.0f, 0.0f, 1.0f);
     vk::ClearValue clearValue(clearColor);
@@ -56,8 +64,6 @@ void Video::Render()
         *m_RenderPass.Get(), *m_Framebuffers[m_CurrentImage],
         vk::Rect2D({}, m_Surface.surfaceCapabilities.currentExtent),
         clearValue);
-
-    vk::raii::CommandBuffer& commandBuffer = m_CommandBuffer.Get();
 
     commandBuffer.begin({vk::CommandBufferUsageFlagBits::eSimultaneousUse});
     commandBuffer.beginRenderPass(
@@ -81,15 +87,17 @@ void Video::Render()
         vk::PipelineStageFlagBits::eColorAttachmentOutput;
     vk::SubmitInfo submitInfo(
         *m_SyncObjects.imageAvailableSemaphores.at(m_CurrentImage), waitFlags,
-        *m_CommandBuffer.Get(),
+        *commandBuffer,
         *m_SyncObjects.renderFinishedSemaphores.at(m_CurrentImage));
     m_Queue.submit(
         submitInfo, *m_SyncObjects.inFlightFences.at(m_CurrentImage));
 
-    vk::PresentInfoKHR presentInfo =
-        (m_SyncObjects.renderFinishedSemaphores.at(m_CurrentImage),
-         *m_Swapchain.Get(), m_CurrentImage);
+    vk::PresentInfoKHR presentInfo(
+        *m_SyncObjects.renderFinishedSemaphores.at(m_CurrentImage),
+        *m_Swapchain.Get(), m_CurrentImage);
     vk::Result presentResult = m_Queue.presentKHR(presentInfo);
+
+    m_CurrentImage = (m_CurrentImage + 1) % m_Swapchain.GetImageCount();
 }
 
 void Video::UpdateUnformBuffers(float theta)
@@ -115,7 +123,8 @@ std::vector<Buffer<UniformBufferObject>> Video::ConstructUniformBuffers()
     std::vector<Buffer<UniformBufferObject>> uniformBuffers;
     for (size_t i = 0; i < m_Swapchain.GetImageCount(); i++)
     {
-        uniformBuffers.emplace_back(m_Device, 1, vk::BufferUsageFlagBits::eUniformBuffer);
+        uniformBuffers.emplace_back(
+            m_Device, 1, vk::BufferUsageFlagBits::eUniformBuffer);
     }
 
     return uniformBuffers;

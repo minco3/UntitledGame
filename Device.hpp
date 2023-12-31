@@ -19,6 +19,8 @@ public:
     vk::raii::Device CreateDevice(Surface& surface);
 
     vk::raii::Device& Get();
+    vk::raii::PhysicalDevice& GetPhysicalDevice();
+    
     uint32_t FindMemoryType(
         vk::MemoryRequirements memoryRequirements,
         vk::MemoryPropertyFlags memoryPropertyFlags);

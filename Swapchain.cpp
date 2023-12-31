@@ -1,11 +1,11 @@
 #include "Swapchain.hpp"
 
 Swapchain::Swapchain(Device& device, Surface& surface)
-    : m_Swapchain(CreateSwapchain(device, surface)),
-      m_ImageCount(m_SwapchainImageViews.size())
+    : m_Swapchain(CreateSwapchain(device, surface))
 {
     CreateSwapchainImageViews(device.Get(), surface.surfaceFormat);
     m_Extent = surface.surfaceCapabilities.currentExtent;
+    m_ImageCount = m_SwapchainImageViews.size();
 }
 
 vk::raii::SwapchainKHR
@@ -34,14 +34,13 @@ void Swapchain::CreateSwapchainImageViews(
     VkResult result;
     std::vector<vk::Image> swapchainImages = m_Swapchain.getImages();
     m_SwapchainImageViews.reserve(swapchainImages.size());
-    for (size_t i = 0; i < swapchainImages.size(); i++)
+    for (auto image : swapchainImages)
     {
-
         vk::ImageSubresourceRange subresourceRange(
             vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
         vk::ImageViewCreateInfo createInfo(
-            {}, swapchainImages.at(i), vk::ImageViewType::e2D,
-            surfaceFormat.format, {}, subresourceRange);
+            {}, image, vk::ImageViewType::e2D, surfaceFormat.format, {},
+            subresourceRange);
 
         m_SwapchainImageViews.emplace_back(device, createInfo);
     }

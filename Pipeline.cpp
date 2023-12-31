@@ -2,10 +2,10 @@
 #include "Vertex.hpp"
 
 GraphicsPipeline::GraphicsPipeline(
-    Device& device, RenderPass& renderPass, Surface& surface, Descriptors& descriptors)
-    : m_PipelineLayout(
-          device.Get(), vk::PipelineLayoutCreateInfo({}, *descriptors.GetLayout())),
-      m_Pipeline(device.Get(), nullptr, GetPipelineCreateInfo(device.Get(), renderPass.Get(), surface.surfaceCapabilities))
+    Device& device, RenderPass& renderPass, Surface& surface,
+    Descriptors& descriptors)
+    : m_PipelineLayout(CreatePipelineLayout(device, descriptors)),
+      m_Pipeline(CreatePipeline(device, renderPass, surface))
 {
 }
 
@@ -15,13 +15,10 @@ vk::raii::PipelineLayout& GraphicsPipeline::GetLayout()
     return m_PipelineLayout;
 }
 
-vk::GraphicsPipelineCreateInfo GraphicsPipeline::GetPipelineCreateInfo(
-    vk::raii::Device& device,
-    vk::raii::RenderPass& renderPass,
-    vk::SurfaceCapabilitiesKHR surfaceCapabilities)
+vk::raii::Pipeline GraphicsPipeline::CreatePipeline(
+    Device& device, RenderPass& renderPass, Surface& surface)
 {
-
-    m_Shaders = LoadShaders(device);
+    m_Shaders = LoadShaders(device.Get());
     std::vector<vk::PipelineShaderStageCreateInfo> shaderStages =
         CreateShaderStage();
 
@@ -39,14 +36,15 @@ vk::GraphicsPipelineCreateInfo GraphicsPipeline::GetPipelineCreateInfo(
         {}, vk::PrimitiveTopology::eTriangleList, {});
 
     vk::Viewport viewport(
-        0.0f, 0.0f, surfaceCapabilities.currentExtent.width,
-        surfaceCapabilities.currentExtent.height, 0.0f, 1.0f);
-    vk::Rect2D scissor({}, surfaceCapabilities.currentExtent);
+        0.0f, 0.0f, surface.surfaceCapabilities.currentExtent.width,
+        surface.surfaceCapabilities.currentExtent.height, 0.0f, 1.0f);
+    vk::Rect2D scissor({}, surface.surfaceCapabilities.currentExtent);
 
     vk::PipelineViewportStateCreateInfo viewportState({}, viewport, scissor);
 
     vk::PipelineRasterizationStateCreateInfo rasteriztionState{};
     rasteriztionState.setCullMode(vk::CullModeFlagBits::eBack);
+    rasteriztionState.setLineWidth(1.0f);
 
     vk::PipelineMultisampleStateCreateInfo multisampleState{};
 
@@ -57,14 +55,29 @@ vk::GraphicsPipelineCreateInfo GraphicsPipeline::GetPipelineCreateInfo(
     depthStencilState.setDepthCompareOp(vk::CompareOp::eLess);
     depthStencilState.setMaxDepthBounds(100.0f);
 
-    vk::PipelineColorBlendStateCreateInfo colorBlendState{};
+    vk::PipelineColorBlendAttachmentState colorAttachment{};
+    vk::PipelineColorBlendStateCreateInfo colorBlendState({}, VK_FALSE, vk::LogicOp::eClear, colorAttachment);
 
     vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo(
         {}, shaderStages, &vertexInputState, &inputAssemblyState, {},
-        &viewportState, &rasteriztionState, &multisampleState, &depthStencilState,
-        &colorBlendState, {}, *m_PipelineLayout, *renderPass);
+        &viewportState, &rasteriztionState, &multisampleState,
+        &depthStencilState, &colorBlendState, {}, *m_PipelineLayout,
+        *renderPass.Get());
 
-    return graphicsPipelineCreateInfo;
+    return device.Get().createGraphicsPipeline(
+        nullptr, graphicsPipelineCreateInfo);
+}
+
+vk::raii::PipelineLayout
+GraphicsPipeline::CreatePipelineLayout(Device& device, Descriptors& descriptors)
+{
+    std::vector<vk::DescriptorSetLayout> descriptorSetLayouts;
+    for (auto& layout : descriptors.GetLayouts())
+    {
+        descriptorSetLayouts.push_back(*layout);
+    }
+    vk::PipelineLayoutCreateInfo createInfo({}, descriptorSetLayouts);
+    return device.Get().createPipelineLayout(createInfo);
 }
 
 std::vector<vk::PipelineShaderStageCreateInfo>

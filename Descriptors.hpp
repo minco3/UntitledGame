@@ -1,6 +1,6 @@
 #pragma once
-#include "Device.hpp"
 #include "Buffer.hpp"
+#include "Device.hpp"
 #include "UniformBuffer.hpp"
 #include <vector>
 #include <vulkan/vulkan_raii.hpp>
@@ -12,20 +12,24 @@ public:
         Device& device,
         std::vector<Buffer<UniformBufferObject>>& uniformBuffers,
         size_t imageCount);
-    constexpr vk::raii::DescriptorSetLayout& GetLayout()
+    constexpr std::vector<vk::raii::DescriptorSetLayout>& GetLayouts()
     {
-        return m_DescriptorSetLayout;
+        return m_DescriptorSetLayouts;
     }
     constexpr vk::raii::DescriptorPool& GetPool() { return m_DescriptorPool; }
     constexpr vk::raii::DescriptorSets& GetSets() { return m_DescriptorSets; }
 
 private:
-    vk::DescriptorPoolCreateInfo GetDescriptorPoolCreateInfo(size_t imageCount);
-    vk::DescriptorSetLayoutCreateInfo GetDescriptorSetLayoutCreateInfo();
+    vk::raii::DescriptorPool
+    CreateDescriptorPool(Device& device, size_t imageCount);
+    std::vector<vk::raii::DescriptorSetLayout>
+    CreateDescriptorSetLayouts(Device& device, size_t imageCount);
+    vk::raii::DescriptorSets
+    CreateDescriptorSets(Device& device);
 
 private:
     vk::raii::DescriptorPool m_DescriptorPool;
-    vk::raii::DescriptorSetLayout m_DescriptorSetLayout;
+    std::vector<vk::raii::DescriptorSetLayout> m_DescriptorSetLayouts;
     vk::raii::DescriptorSets m_DescriptorSets;
 
     // probably doesnt need to be a member variable
