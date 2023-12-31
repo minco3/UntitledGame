@@ -10,7 +10,7 @@ void LogWarning(const std::string& message)
 {
     fmt::print(std::cerr, "WARNING: {}\n", message);
 }
-#define DEBUG
+
 void LogDebug(const std::string& message)
 {
 #ifdef DEBUG
