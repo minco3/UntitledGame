@@ -1,7 +1,7 @@
 #include "RenderPass.hpp"
 
 RenderPass::RenderPass(Device& device, Surface& surface)
-    : m_RenderPass(device.Get(), GetCreateInfo(surface))
+    : m_RenderPass(CreateRenderPass(device, surface))
 {
 }
 
@@ -11,7 +11,7 @@ vk::raii::RenderPass& RenderPass::Get()
 }
 
 
-vk::RenderPassCreateInfo RenderPass::GetCreateInfo(Surface& surface)
+vk::raii::RenderPass RenderPass::CreateRenderPass(Device& device, Surface& surface)
 {
     vk::AttachmentDescription colorAttachment(
         {}, surface.surfaceFormat.format, vk::SampleCountFlagBits::e1,
@@ -26,5 +26,5 @@ vk::RenderPassCreateInfo RenderPass::GetCreateInfo(Surface& surface)
 
     vk::RenderPassCreateInfo renderPassCreateInfo({}, colorAttachment, subpass);
 
-    return renderPassCreateInfo;
+    return device.Get().createRenderPass(renderPassCreateInfo);
 }

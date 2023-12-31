@@ -10,6 +10,6 @@ public:
     RenderPass(Device& device, Surface& surface);
     vk::raii::RenderPass& Get();
 private:
-    vk::RenderPassCreateInfo GetCreateInfo(Surface& surface);
+    vk::raii::RenderPass CreateRenderPass(Device& device, Surface& surface);
     vk::raii::RenderPass m_RenderPass;    
 };

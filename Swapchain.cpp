@@ -12,6 +12,7 @@ vk::raii::SwapchainKHR
 Swapchain::CreateSwapchain(Device& device, Surface& surface)
 {
     surface.GetSurfaceCapabilities(device);
+    surface.GetSurfaceFormat(device);
 
     vk::SwapchainCreateInfoKHR createInfo(
         {}, *surface.Get(), surface.surfaceCapabilities.minImageCount + 1,
