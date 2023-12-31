@@ -10,7 +10,7 @@ find_package(SDL2 REQUIRED)
 find_package(SDL2_image REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(glm REQUIRED)
-# find_package(fmt REQUIRED)
+find_package(fmt REQUIRED)
 # find_package(shaderc REQUIRED)
 
 if(APPLE)
@@ -18,7 +18,7 @@ include_directories(/opt/homebrew/include)
 include_directories(/usr/local/include)
 endif()
 
-add_subdirectory(fmt)
+# add_subdirectory(fmt)
 
 file(GLOB source_files CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/*.cpp" )
 

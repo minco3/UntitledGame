@@ -54,9 +54,13 @@ vk::raii::Pipeline GraphicsPipeline::CreatePipeline(
     vk::PipelineDepthStencilStateCreateInfo depthStencilState{};
     depthStencilState.setDepthCompareOp(vk::CompareOp::eLess);
     depthStencilState.setMaxDepthBounds(100.0f);
+    depthStencilState.setDepthWriteEnable(VK_TRUE);
 
     vk::PipelineColorBlendAttachmentState colorAttachment{};
-    vk::PipelineColorBlendStateCreateInfo colorBlendState({}, VK_FALSE, vk::LogicOp::eClear, colorAttachment);
+    colorAttachment.setColorWriteMask(
+        vk::FlagTraits<vk::ColorComponentFlagBits>::allFlags);
+    vk::PipelineColorBlendStateCreateInfo colorBlendState(
+        {}, VK_FALSE, vk::LogicOp::eClear, colorAttachment);
 
     vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo(
         {}, shaderStages, &vertexInputState, &inputAssemblyState, {},
