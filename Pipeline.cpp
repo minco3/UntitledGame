@@ -2,11 +2,10 @@
 #include "Vertex.hpp"
 
 GraphicsPipeline::GraphicsPipeline(
-    Device& device, vk::raii::RenderPass& renderPass, Surface& surface)
-    : m_DescriptorSetLayout(device.Get(), GetDescriptorSetLayoutCreateInfo()),
-      m_PipelineLayout(
-          device.Get(), vk::PipelineLayoutCreateInfo({}, *m_DescriptorSetLayout)),
-      m_Pipeline(device.Get(), nullptr, GetPipelineCreateInfo(device.Get(), renderPass, surface.surfaceCapabilities))
+    Device& device, RenderPass& renderPass, Surface& surface, Descriptors& descriptors)
+    : m_PipelineLayout(
+          device.Get(), vk::PipelineLayoutCreateInfo({}, *descriptors.GetLayout())),
+      m_Pipeline(device.Get(), nullptr, GetPipelineCreateInfo(device.Get(), renderPass.Get(), surface.surfaceCapabilities))
 {
 }
 
@@ -68,15 +67,6 @@ vk::GraphicsPipelineCreateInfo GraphicsPipeline::GetPipelineCreateInfo(
     return graphicsPipelineCreateInfo;
 }
 
-vk::DescriptorSetLayoutCreateInfo
-GraphicsPipeline::GetDescriptorSetLayoutCreateInfo()
-{
-    CreateDescriptorSetLayoutBindings();
-
-    return vk::DescriptorSetLayoutCreateInfo(
-        vk::DescriptorSetLayoutCreateFlags(), m_DescriptorSetLayoutBindings);
-}
-
 std::vector<vk::PipelineShaderStageCreateInfo>
 GraphicsPipeline::CreateShaderStage()
 {
@@ -93,13 +83,4 @@ GraphicsPipeline::CreateShaderStage()
         vertShaderStageCreateInfo, fragShaderStageCreateInfo};
 
     return shaderStages;
-}
-
-void GraphicsPipeline::CreateDescriptorSetLayoutBindings()
-{
-    vk::DescriptorSetLayoutBinding descriptorSetLayoutBinding(
-        0, vk::DescriptorType::eUniformBuffer, 1,
-        vk::ShaderStageFlagBits::eVertex);
-
-    m_DescriptorSetLayoutBindings.push_back(descriptorSetLayoutBinding);
 }

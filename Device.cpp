@@ -2,13 +2,13 @@
 #include "vulkan/vulkan_beta.h"
 #include <string_view>
 
-Device::Device(vk::raii::Instance& instance, Surface& surface)
-    : m_PhysicalDevice(instance.enumeratePhysicalDevices().front()),
-      m_Device(m_PhysicalDevice, GetDeviceCreateInfo(surface))
+Device::Device(VulkanInstance& instance, Surface& surface)
+    : m_PhysicalDevice(instance.Get().enumeratePhysicalDevices().front()),
+      m_Device(CreateDevice(surface))
 {
 }
 
-vk::DeviceCreateInfo Device::GetDeviceCreateInfo(Surface& surface)
+vk::raii::Device Device::CreateDevice(Surface& surface)
 {
     std::vector<vk::DeviceQueueCreateInfo> deviceQueueCreateInfos =
         GetDeviceQueueCreateInfos(surface);
@@ -16,9 +16,11 @@ vk::DeviceCreateInfo Device::GetDeviceCreateInfo(Surface& surface)
 
     std::vector<const char*> deviceLayers;
 
-    return vk::DeviceCreateInfo(
+    vk::DeviceCreateInfo createInfo(
         vk::DeviceCreateFlags(), deviceQueueCreateInfos, deviceLayers,
         deviceExtensions);
+
+    return m_PhysicalDevice.createDevice(createInfo);
 }
 
 std::vector<vk::DeviceQueueCreateInfo>
@@ -30,26 +32,27 @@ Device::GetDeviceQueueCreateInfos(Surface& surface)
     std::vector<vk::DeviceQueueCreateInfo> deviceQueueCreateInfos;
     deviceQueueCreateInfos.reserve(queueFamilyProperties.size());
 
-    m_DeviceQueues.resize(
-        queueFamilyProperties.size(), {{std::vector<float>{1.0f}}});
+    m_DeviceQueues.reserve(queueFamilyProperties.size());
 
     LogDebug("Queues:");
     for (uint32_t i = 0; i < queueFamilyProperties.size(); i++)
     {
-        const vk::QueueFamilyProperties& properties = queueFamilyProperties.at(i);
+        const vk::QueueFamilyProperties& properties =
+            queueFamilyProperties.at(i);
 
-        m_DeviceQueues.at(i).m_PresentationSupported =
-            m_PhysicalDevice.getSurfaceSupportKHR(i, *surface.Get());
+        m_DeviceQueues.emplace_back(
+            std::vector<float>(properties.queueCount, 1.0f),
+            m_PhysicalDevice.getSurfaceSupportKHR(i, *surface.Get()));
 
-        //TODO: fix queue flags not being able to be print
-
+        // TODO: fix queue flags not being able to be print
         LogDebug(fmt::format(
-            "\tQueue Family [{}]: {:#b} {}", i,
-            properties.queueCount,
+            "\tQueue Family [{}]: {} {}", i, properties.queueCount,
             static_cast<bool>(m_DeviceQueues.at(i).m_PresentationSupported)));
 
-        deviceQueueCreateInfos.emplace_back(
-            0, i, m_DeviceQueues.at(i).m_Priorities);
+        vk::DeviceQueueCreateInfo createInfo(
+            {}, i, m_DeviceQueues.at(i).m_Priorities);
+
+        deviceQueueCreateInfos.push_back(createInfo);
     }
     return deviceQueueCreateInfos;
 }

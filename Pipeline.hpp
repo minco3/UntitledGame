@@ -3,6 +3,8 @@
 #include "Device.hpp"
 #include "Shader.hpp"
 #include "Surface.hpp"
+#include "RenderPass.hpp"
+#include "Descriptors.hpp"
 
 #include <vulkan/vulkan_raii.hpp>
 
@@ -10,7 +12,7 @@ class GraphicsPipeline
 {
 public:
     GraphicsPipeline(
-        Device& device, vk::raii::RenderPass& renderPass, Surface& surface);
+        Device& device, RenderPass& renderPass, Surface& surface, Descriptors& descriptors);
     std::vector<vk::PipelineShaderStageCreateInfo> CreateShaderStage();
     void CreateRenderPass();
     void CreateGraphicsPipeline();
@@ -27,8 +29,6 @@ private:
     void CreateDescriptorSetLayoutBindings();
 
     std::vector<Shader> m_Shaders;
-    std::vector<vk::DescriptorSetLayoutBinding> m_DescriptorSetLayoutBindings;
-    vk::raii::DescriptorSetLayout m_DescriptorSetLayout;
     vk::raii::PipelineLayout m_PipelineLayout;
     vk::raii::Pipeline m_Pipeline;
 };

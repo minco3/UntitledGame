@@ -4,12 +4,12 @@
 #include <vulkan/vulkan_core.h>
 
 VulkanInstance::VulkanInstance(const Window& window, vk::raii::Context& context)
-    : m_Instance(context, GetInstanceCreateInfo(window))
+    : m_Instance(CreateInstance(window, context))
 {
 }
 
-vk::InstanceCreateInfo
-VulkanInstance::GetInstanceCreateInfo(const Window& window)
+vk::raii::Instance
+VulkanInstance::CreateInstance(const Window& window, vk::raii::Context& context)
 {
     vk::ApplicationInfo applicationInfo("Untitled Game", 1);
 
@@ -20,7 +20,9 @@ VulkanInstance::GetInstanceCreateInfo(const Window& window)
     vk::InstanceCreateFlags instanceCreateFlags =
         GetInstanceCreateFlags(extNames);
 
-    return {instanceCreateFlags, &applicationInfo, instanceLayers, extNames};
+    vk::InstanceCreateInfo createInfo(instanceCreateFlags, &applicationInfo, instanceLayers, extNames);
+
+    return context.createInstance(createInfo);
 }
 
 vk::InstanceCreateFlags VulkanInstance::GetInstanceCreateFlags(

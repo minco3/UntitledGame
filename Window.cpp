@@ -17,7 +17,7 @@ Window::~Window() {
     SDL_DestroyWindow(m_Window);
 }
 
-SDL_Window* Window::operator()()
+SDL_Window* Window::Get()
 {
     return m_Window;
 }

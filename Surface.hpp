@@ -12,7 +12,7 @@ class Device;
 class Surface
 {
 public:
-    Surface(SDL_Window* window, vk::raii::Instance& instance);
+    Surface(Window& window, VulkanInstance& instance);
     void GetSurfaceCapabilities(Device& device);
     const std::vector<vk::SurfaceFormatKHR>
     GetCompatableSurfaceFormats(Device& device);

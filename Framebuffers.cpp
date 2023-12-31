@@ -14,7 +14,7 @@ Framebuffers::Framebuffers(
             {}, *renderPass.Get(), *imageView, swapchainExtent.width,
             swapchainExtent.height, 1);
 
-        m_Framebuffers.emplace_back(*device.Get(), framebufferCreateInfo);
+        m_Framebuffers.emplace_back(device.Get(), framebufferCreateInfo);
     }
 
     // for shits and giggles

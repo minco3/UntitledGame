@@ -16,7 +16,7 @@ int main(int argc, char** argv)
         Application app;
         app.Run();
     }
-    catch (vk::SystemError& e)
+    catch (vk::SystemError& e) // taken from VulkanSamples
     {
         LogError(fmt::format("Vulkan Error: {}\n", e.what()));
         exit(-1);

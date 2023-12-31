@@ -2,12 +2,12 @@
 #include "Device.hpp"
 #include <algorithm>
 
-Surface::Surface(SDL_Window* window, vk::raii::Instance& instance)
-    : m_Surface(instance, createSDLVulkanSurface(window, instance))
+Surface::Surface(Window& window, VulkanInstance& instance)
+    : m_Surface(instance.Get(), createSDLVulkanSurface(window.Get(), instance.Get()))
 {
 }
 
-VkSurfaceKHR createSDLVulkanSurface(SDL_Window* window, vk::raii::Instance& instance)
+VkSurfaceKHR Surface::createSDLVulkanSurface(SDL_Window* window, vk::raii::Instance& instance)
 {
     VkSurfaceKHR surface;
     if (!window)
