@@ -19,8 +19,7 @@ public:
 
 private:
     std::vector<vk::raii::ImageView> m_SwapchainImageViews;
-    vk::raii::SwapchainKHR CreateSwapchain(
-        Device& device, Surface& surface);
+    vk::raii::SwapchainKHR CreateSwapchain(Device& device, Surface& surface);
     void CreateSwapchainImageViews(
         vk::raii::Device& device, vk::SurfaceFormatKHR surfaceFormat);
     vk::raii::SwapchainKHR m_Swapchain;

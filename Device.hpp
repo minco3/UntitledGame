@@ -2,14 +2,14 @@
 #include "DeviceQueue.hpp"
 #include "Log.hpp"
 #include "Surface.hpp"
-#include <vulkan/vulkan_raii.hpp>
 #include <vector>
+#include <vulkan/vulkan_raii.hpp>
 
 class Device
 {
 public:
     Device(VulkanInstance& instance, Surface& surface);
-    
+
     // std::vector<vk::raii::PhysicalDevice>
     // GetPhysicalDevices(vk::raii::Instance& instance);
     // VkPhysicalDevice ChoosePhysicalDevice(vk::raii::Instance& instance);
@@ -20,13 +20,15 @@ public:
 
     vk::raii::Device& Get();
     vk::raii::PhysicalDevice& GetPhysicalDevice();
-    
+
     uint32_t FindMemoryType(
         vk::MemoryRequirements memoryRequirements,
         vk::MemoryPropertyFlags memoryPropertyFlags);
 
-    vk::SurfaceCapabilitiesKHR GetSurfaceCapabilities(vk::raii::SurfaceKHR& device);
-    std::vector<vk::SurfaceFormatKHR> GetCompatableSurfaceFormats(vk::raii::SurfaceKHR& surface);
+    vk::SurfaceCapabilitiesKHR
+    GetSurfaceCapabilities(vk::raii::SurfaceKHR& device);
+    std::vector<vk::SurfaceFormatKHR>
+    GetCompatableSurfaceFormats(vk::raii::SurfaceKHR& surface);
 
 private:
     std::vector<DeviceQueue> m_DeviceQueues;

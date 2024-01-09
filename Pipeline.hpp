@@ -20,10 +20,10 @@ public:
     vk::raii::PipelineLayout& GetLayout();
 
 private:
-    vk::raii::Pipeline CreatePipeline(
-        Device& device, RenderPass& renderPass, Surface& surface);
-    vk::raii::PipelineLayout CreatePipelineLayout(
-        Device& device, Descriptors& descriptors);
+    vk::raii::Pipeline
+    CreatePipeline(Device& device, RenderPass& renderPass, Surface& surface);
+    vk::raii::PipelineLayout
+    CreatePipelineLayout(Device& device, Descriptors& descriptors);
 
     vk::DescriptorSetLayoutCreateInfo GetDescriptorSetLayoutCreateInfo();
     void CreateDescriptorSetLayoutBindings();

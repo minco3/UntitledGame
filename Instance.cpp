@@ -20,7 +20,8 @@ VulkanInstance::CreateInstance(const Window& window, vk::raii::Context& context)
     vk::InstanceCreateFlags instanceCreateFlags =
         GetInstanceCreateFlags(extNames);
 
-    vk::InstanceCreateInfo createInfo(instanceCreateFlags, &applicationInfo, instanceLayers, extNames);
+    vk::InstanceCreateInfo createInfo(
+        instanceCreateFlags, &applicationInfo, instanceLayers, extNames);
 
     return context.createInstance(createInfo);
 }

@@ -13,17 +13,11 @@ Window::Window(
     }
 }
 
-Window::~Window() {
-    SDL_DestroyWindow(m_Window);
-}
+Window::~Window() { SDL_DestroyWindow(m_Window); }
 
-SDL_Window* Window::Get()
-{
-    return m_Window;
-}
+SDL_Window* Window::Get() { return m_Window; }
 
-
-std::vector<const char *> Window::GetRequiredExtensionNames() const
+std::vector<const char*> Window::GetRequiredExtensionNames() const
 {
     unsigned int numExtentions;
     if (SDL_Vulkan_GetInstanceExtensions(m_Window, &numExtentions, nullptr) !=

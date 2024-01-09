@@ -1,10 +1,10 @@
 #pragma once
 
-#include <stdexcept>
-#include <iostream>
-#include <vulkan/vulkan.h>
-#include <fmt/ostream.h>
 #include "vulkanfmt.hpp"
+#include <fmt/ostream.h>
+#include <iostream>
+#include <stdexcept>
+#include <vulkan/vulkan.h>
 
 void LogError(const std::string& message);
 

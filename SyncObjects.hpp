@@ -1,10 +1,10 @@
 #pragma once
 
 #include "Device.hpp"
-#include <vulkan/vulkan_raii.hpp>
 #include <cstdint>
+#include <vulkan/vulkan_raii.hpp>
 
-constexpr const size_t MAX_FRAMES_IN_FLIGHT=3;
+constexpr const size_t MAX_FRAMES_IN_FLIGHT = 3;
 
 class SyncObjects
 {
@@ -13,6 +13,5 @@ public:
 
     std::vector<vk::raii::Semaphore> imageAvailableSemaphores;
     std::vector<vk::raii::Semaphore> renderFinishedSemaphores;
-    std::vector<vk::raii::Fence>     inFlightFences;
-
+    std::vector<vk::raii::Fence> inFlightFences;
 };

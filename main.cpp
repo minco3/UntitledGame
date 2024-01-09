@@ -1,7 +1,7 @@
 #include "Application.hpp"
 #include "Log.hpp"
-#include <SDL2/SDL.h>
 #include "vulkan/vulkan.hpp"
+#include <SDL2/SDL.h>
 
 // #define DEBUG
 
@@ -26,7 +26,7 @@ int main(int argc, char** argv)
         LogError(fmt::format("std::exception: {}\n", e.what()));
         exit(-1);
     }
-    catch( ... )
+    catch (...)
     {
         LogError(fmt::format("Unknown Error"));
         exit(-1);

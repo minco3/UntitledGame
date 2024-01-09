@@ -1,7 +1,11 @@
 #include "CommandBuffer.hpp"
 
-CommandBuffer::CommandBuffer(Device& device, uint32_t queueIndex, size_t bufferCount)
-    : m_CommandPool(device.Get(), vk::CommandPoolCreateInfo(vk::CommandPoolCreateFlagBits::eResetCommandBuffer, queueIndex)),
+CommandBuffer::CommandBuffer(
+    Device& device, uint32_t queueIndex, size_t bufferCount)
+    : m_CommandPool(
+          device.Get(),
+          vk::CommandPoolCreateInfo(
+              vk::CommandPoolCreateFlagBits::eResetCommandBuffer, queueIndex)),
       m_CommandBuffers(
           device.Get(),
           vk::CommandBufferAllocateInfo(
