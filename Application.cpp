@@ -1,7 +1,16 @@
 #include "Application.hpp"
+#include "imgui/imgui_impl_sdl2.h"
+#include "imgui/imgui_impl_vulkan.h"
 #include <SDL2/SDL.h>
 
 Application::Application() {}
+
+Application::~Application()
+{
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
+}
 
 void Application::Run()
 {
@@ -9,12 +18,17 @@ void Application::Run()
     while (m_Running)
     {
         Update();
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
+        ImGui::NewFrame();
+        ImGui::ShowDemoWindow();
         m_Video.Render();
     }
 }
 void Application::Update()
 {
     SDL_Event event;
+    ImGui_ImplSDL2_ProcessEvent(&event);
     while (SDL_PollEvent(&event))
     {
         switch (event.type)
