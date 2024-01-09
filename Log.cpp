@@ -17,12 +17,3 @@ void LogDebug(const std::string& message)
     fmt::print(std::cout, "DEBUG: {}\n", message);
 #endif
 }
-
-void LogVulkanError(const std::string& message, VkResult result)
-{
-    if (result != VK_SUCCESS)
-    {
-        std::string errorMessage = fmt::format("ERROR: {}: {}", message, result);
-        throw std::runtime_error(errorMessage);
-    }
-}

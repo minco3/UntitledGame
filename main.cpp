@@ -1,5 +1,6 @@
 #include "Application.hpp"
 #include "Log.hpp"
+#include "vulkan/vulkan.hpp"
 #include <SDL2/SDL.h>
 
 // #define DEBUG
@@ -15,10 +16,20 @@ int main(int argc, char** argv)
         Application app;
         app.Run();
     }
-    catch (std::runtime_error& e)
+    catch (vk::SystemError& e) // taken from VulkanSamples
     {
-        LogError(fmt::format("Runtime Error: {}\n", e.what()));
-        exit(1);
+        LogError(fmt::format("Vulkan Error: {}\n", e.what()));
+        exit(-1);
+    }
+    catch (std::exception& e)
+    {
+        LogError(fmt::format("std::exception: {}\n", e.what()));
+        exit(-1);
+    }
+    catch (...)
+    {
+        LogError(fmt::format("Unknown Error"));
+        exit(-1);
     }
     SDL_Quit();
 

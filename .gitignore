@@ -1,3 +1,4 @@
 build/
+Xcode/
 .vscode/
 !.vscode/settings.json

@@ -8,13 +8,17 @@ set(CMAKE_CXX_STANDARD 20)
 
 find_package(SDL2 REQUIRED)
 find_package(SDL2_image REQUIRED)
-find_package(Vulkan REQUIRED)
+find_package(Vulkan REQUIRED COMPONENTS glslc)
 find_package(glm REQUIRED)
 find_package(fmt REQUIRED)
+# find_package(shaderc REQUIRED)
 
+if(APPLE)
 include_directories(/opt/homebrew/include)
 include_directories(/usr/local/include)
-include_directories(~VulkanSDK)
+endif()
+
+# add_subdirectory(fmt)
 
 file(GLOB source_files CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/*.cpp" )
 
@@ -40,6 +44,7 @@ target_link_libraries(UntitledGame SDL2::SDL2main)
 target_link_libraries(UntitledGame SDL2::SDL2)
 target_link_libraries(UntitledGame SDL2_image::SDL2_image)
 target_link_libraries(UntitledGame Vulkan::Vulkan)
+# message(STATUS ${Vulkan_LIBRARY})
 if (WIN32)
 target_link_libraries(UntitledGame glm)
 else()

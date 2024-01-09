@@ -1,13 +1,14 @@
 #pragma once
 
 #include <vector>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan_raii.hpp>
 
 class DeviceQueue
 {
 public:
-    DeviceQueue(const std::vector<float>& priorities);
+    DeviceQueue(
+        const std::vector<float>& priorities, vk::Bool32 presentationSupported);
 
     std::vector<float> m_Priorities;
-    VkBool32 m_PresentationSupported;
+    vk::Bool32 m_PresentationSupported;
 };

@@ -13,11 +13,11 @@ Window::Window(
     }
 }
 
-Window::~Window() {
-    SDL_DestroyWindow(m_Window);
-}
+Window::~Window() { SDL_DestroyWindow(m_Window); }
 
-std::vector<const char *> Window::GetRequiredExtensionNames()
+SDL_Window* Window::Get() { return m_Window; }
+
+std::vector<const char*> Window::GetRequiredExtensionNames() const
 {
     unsigned int numExtentions;
     if (SDL_Vulkan_GetInstanceExtensions(m_Window, &numExtentions, nullptr) !=
@@ -32,14 +32,4 @@ std::vector<const char *> Window::GetRequiredExtensionNames()
         LogError("Error getting SDL required vulkan extensions");
     }
     return sdlExtNames;
-}
-
-VkSurfaceKHR Window::CreateSDLSurface(VkInstance instance)
-{
-    VkSurfaceKHR surface;
-    if (SDL_Vulkan_CreateSurface(m_Window, instance, &surface) != SDL_TRUE)
-    {
-        LogError("Could not create SDL surface");
-    }
-    return surface;
 }

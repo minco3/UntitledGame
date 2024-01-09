@@ -2,7 +2,16 @@
 #include <algorithm>
 #include <filesystem>
 
-std::vector<Shader> LoadShaders(VkDevice device)
+Shader::Shader(
+    vk::raii::Device& device, const std::string& _name,
+    const vk::ShaderModuleCreateInfo& vertShaderCreateInfo,
+    const vk::ShaderModuleCreateInfo& fragShaderCreateInfo)
+    : name(_name), vertShaderModule(device, vertShaderCreateInfo),
+        fragShaderModule(device, fragShaderCreateInfo)
+{
+}
+
+std::vector<Shader> LoadShaders(vk::raii::Device& device)
 {
     std::vector<Shader> shaders;
     std::filesystem::path shader_directory =
@@ -10,6 +19,7 @@ std::vector<Shader> LoadShaders(VkDevice device)
     for (std::filesystem::directory_entry entry :
          std::filesystem::directory_iterator(shader_directory))
     {
+        // shaderc::Compiler c;
         if (entry.path().extension() == ".spv") // a.frag(.spv)
         {
             std::string name =
@@ -32,8 +42,7 @@ std::vector<Shader> LoadShaders(VkDevice device)
             fragShaderPath.append(name + ".frag.spv");
             if (shaderType == ".vert")
             {
-                if (!std::filesystem::exists(
-                        fragShaderPath))
+                if (!std::filesystem::exists(fragShaderPath))
                 {
                     LogWarning(fmt::format(
                         "Could not find fragment shader for shader {}", name));
@@ -42,8 +51,7 @@ std::vector<Shader> LoadShaders(VkDevice device)
             }
             else if (shaderType == ".frag")
             {
-                if (!std::filesystem::exists(
-                        vertShaderPath))
+                if (!std::filesystem::exists(vertShaderPath))
                 {
                     LogWarning(fmt::format(
                         "Could not find vertex shader for shader {}", name));
@@ -55,8 +63,7 @@ std::vector<Shader> LoadShaders(VkDevice device)
                 continue;
             }
 
-            std::ifstream vertShaderCodeFile(
-                vertShaderPath, std::ios::binary);
+            std::ifstream vertShaderCodeFile(vertShaderPath, std::ios::binary);
             if (!vertShaderCodeFile.is_open())
             {
                 LogWarning(fmt::format(
@@ -64,8 +71,7 @@ std::vector<Shader> LoadShaders(VkDevice device)
                     vertShaderPath.string()));
             }
 
-            std::ifstream fragShaderCodeFile(
-                fragShaderPath, std::ios::binary);
+            std::ifstream fragShaderCodeFile(fragShaderPath, std::ios::binary);
             if (!fragShaderCodeFile.is_open())
             {
                 LogWarning(fmt::format(
@@ -73,7 +79,7 @@ std::vector<Shader> LoadShaders(VkDevice device)
                     fragShaderPath.string()));
             }
 
-            std::string vertShaderCode(
+            const std::string vertShaderCode(
                 (std::istreambuf_iterator<char>(vertShaderCodeFile)),
                 std::istreambuf_iterator<char>());
 
@@ -81,17 +87,13 @@ std::vector<Shader> LoadShaders(VkDevice device)
                 (std::istreambuf_iterator<char>(fragShaderCodeFile)),
                 std::istreambuf_iterator<char>());
 
-            VkShaderModuleCreateInfo vertShaderCreateInfo = {
-                .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-                .codeSize = vertShaderCode.size(),
-                .pCode =
-                    reinterpret_cast<const uint32_t*>(vertShaderCode.data())};
+            vk::ShaderModuleCreateInfo vertShaderCreateInfo(
+                {}, static_cast<uint32_t>(vertShaderCode.size()),
+                reinterpret_cast<const uint32_t*>(vertShaderCode.data()));
 
-            VkShaderModuleCreateInfo fragShaderCreateInfo = {
-                .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-                .codeSize = fragShaderCode.size(),
-                .pCode =
-                    reinterpret_cast<const uint32_t*>(fragShaderCode.data())};
+            vk::ShaderModuleCreateInfo fragShaderCreateInfo(
+                {}, static_cast<uint32_t>(fragShaderCode.size()),
+                reinterpret_cast<const uint32_t*>(fragShaderCode.data()));
 
             shaders.emplace_back(
                 device, name, vertShaderCreateInfo, fragShaderCreateInfo);
