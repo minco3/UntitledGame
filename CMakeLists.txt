@@ -19,6 +19,7 @@ include_directories(/usr/local/include)
 endif()
 
 # add_subdirectory(fmt)
+add_subdirectory(imgui)
 
 file(GLOB source_files CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/*.cpp" )
 
@@ -44,6 +45,7 @@ target_link_libraries(UntitledGame SDL2::SDL2main)
 target_link_libraries(UntitledGame SDL2::SDL2)
 target_link_libraries(UntitledGame SDL2_image::SDL2_image)
 target_link_libraries(UntitledGame Vulkan::Vulkan)
+target_link_libraries(UntitledGame imgui)
 # message(STATUS ${Vulkan_LIBRARY})
 if (WIN32)
 target_link_libraries(UntitledGame glm)
