@@ -138,7 +138,7 @@ void Video::InitImGui()
     init_info.Allocator = nullptr;
     auto check_vulkan_err = [](VkResult err)
     {
-        if (err != vk::Result::eSuccess)
+        if (vk::Result(err) != vk::Result::eSuccess)
         {
             LogError(vk::to_string(vk::Result(err)));
         }
