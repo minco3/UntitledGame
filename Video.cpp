@@ -31,7 +31,7 @@ Video::Video()
       m_CommandBuffers(
           m_Device, m_QueueFamilyIndex, m_Swapchain.GetImageCount()),
       m_SyncObjects(m_Device),
-      m_Descriptors(m_Device, m_UniformBuffers, m_Swapchain.GetImageCount()),
+      m_Descriptors(m_Device, m_UniformBuffers, m_Swapchain.GetImageCount(), 2),
       m_Pipeline(m_Device, m_RenderPass, m_Surface, m_Descriptors)
 {
     // buffers
@@ -140,7 +140,7 @@ void Video::InitImGui()
     {
         if (vk::Result(err) != vk::Result::eSuccess)
         {
-            LogError(vk::to_string(vk::Result(err)));
+            throw vk::SystemError(std::error_code(vk::Result(err)));
         }
     };
     init_info.CheckVkResultFn = check_vulkan_err;

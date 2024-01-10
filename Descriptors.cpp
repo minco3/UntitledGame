@@ -1,9 +1,11 @@
 #include "Descriptors.hpp"
 
+// TODO: maxSets needs to be revisited later
+
 Descriptors::Descriptors(
     Device& device, std::vector<Buffer<UniformBufferObject>>& uniformBuffers,
-    size_t imageCount)
-    : m_DescriptorPool(CreateDescriptorPool(device, imageCount)),
+    size_t imageCount, size_t setsPerImage)
+    : m_DescriptorPool(CreateDescriptorPool(device, imageCount*setsPerImage)),
       m_DescriptorSetLayouts(CreateDescriptorSetLayouts(device, imageCount)),
       m_DescriptorSets(CreateDescriptorSets(device))
 {
@@ -21,12 +23,12 @@ Descriptors::Descriptors(
 }
 
 vk::raii::DescriptorPool
-Descriptors::CreateDescriptorPool(Device& device, size_t imageCount)
+Descriptors::CreateDescriptorPool(Device& device, size_t maxSets)
 {
     vk::DescriptorPoolSize discriptorPoolSize(
-        vk::DescriptorType::eUniformBuffer, imageCount);
+        vk::DescriptorType::eUniformBuffer, maxSets);
     vk::DescriptorPoolCreateInfo createInfo(
-        vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet, imageCount,
+        vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet, maxSets,
         discriptorPoolSize);
     return device.Get().createDescriptorPool(createInfo);
 }

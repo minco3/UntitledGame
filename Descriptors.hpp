@@ -11,7 +11,7 @@ public:
     Descriptors(
         Device& device,
         std::vector<Buffer<UniformBufferObject>>& uniformBuffers,
-        size_t imageCount);
+        size_t imageCount, size_t setsPerImage);
     constexpr std::vector<vk::raii::DescriptorSetLayout>& GetLayouts()
     {
         return m_DescriptorSetLayouts;
@@ -21,7 +21,7 @@ public:
 
 private:
     vk::raii::DescriptorPool
-    CreateDescriptorPool(Device& device, size_t imageCount);
+    CreateDescriptorPool(Device& device, size_t maxSets);
     std::vector<vk::raii::DescriptorSetLayout>
     CreateDescriptorSetLayouts(Device& device, size_t imageCount);
     vk::raii::DescriptorSets
