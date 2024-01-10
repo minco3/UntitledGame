@@ -6,6 +6,7 @@
 Application::Application()
 {
     ImGui::CreateContext();
+    ImGui::StyleColorsDark();
     m_Video.InitImGui();
 }
 

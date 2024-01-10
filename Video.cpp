@@ -49,6 +49,10 @@ void Video::Render()
     device.waitForFences(
         *m_SyncObjects.inFlightFences.at(m_CurrentImage), VK_TRUE,
         std::numeric_limits<uint64_t>::max());
+    
+    //Render ImGui frame
+    ImGui::Render();
+    ImDrawData* draw_data = ImGui::GetDrawData();
 
     device.resetFences(*m_SyncObjects.inFlightFences.at(m_CurrentImage));
     auto [result, imageIndex] = m_Swapchain.Get().acquireNextImage(
@@ -82,6 +86,7 @@ void Video::Render()
         *m_Descriptors.GetSets().at(m_CurrentImage), nullptr);
 
     commandBuffer.draw(static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+    ImGui_ImplVulkan_RenderDrawData(draw_data, *commandBuffer);
     commandBuffer.endRenderPass();
     commandBuffer.end();
 
