@@ -33,9 +33,9 @@ void Application::Run()
 void Application::Update()
 {
     SDL_Event event;
-    ImGui_ImplSDL2_ProcessEvent(&event);
     while (SDL_PollEvent(&event))
     {
+        ImGui_ImplSDL2_ProcessEvent(&event);
         switch (event.type)
         {
         case SDL_WINDOWEVENT:
