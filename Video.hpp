@@ -26,7 +26,8 @@ public:
 
     void Render();
     void UpdateUnformBuffers(float theta);
-
+    void InitImGui();
+    
 private:
     void FillVertexBuffer();
     std::vector<Buffer<UniformBufferObject>> ConstructUniformBuffers();

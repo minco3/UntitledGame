@@ -4,6 +4,8 @@
 #include "Pipeline.hpp"
 #include "UniformBuffer.hpp"
 #include "Vertex.hpp"
+#include "imgui/imgui_impl_sdl2.h"
+#include "imgui/imgui_impl_vulkan.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_video.h>
 #include <SDL2/SDL_vulkan.h>
@@ -116,6 +118,33 @@ void Video::FillVertexBuffer()
     // load hard-coded vertices into memory
     std::span<Vertex> memorySpan = m_VertexBuffer.GetMemory();
     std::copy_n(vertices.begin(), vertices.size(), memorySpan.begin());
+}
+
+void Video::InitImGui()
+{
+    ImGui_ImplSDL2_InitForVulkan(m_Window.Get());
+    ImGui_ImplVulkan_InitInfo init_info = {};
+    init_info.Instance = *m_Instance.Get();
+    init_info.PhysicalDevice = *m_Device.GetPhysicalDevice();
+    init_info.Device = *m_Device.Get();
+    init_info.QueueFamily = m_QueueFamilyIndex;
+    init_info.Queue = *m_Queue;
+    // init_info.PipelineCache = m_Pipeline.Get;
+    init_info.DescriptorPool = *m_Descriptors.GetPool();
+    init_info.Subpass = 0;
+    init_info.MinImageCount = 2;
+    init_info.ImageCount = 2;
+    init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+    init_info.Allocator = nullptr;
+    auto check_vulkan_err = [](VkResult err)
+    {
+        if (!err)
+        {
+            LogError(vk::to_string(vk::Result(err)));
+        }
+    };
+    init_info.CheckVkResultFn = check_vulkan_err;
+    ImGui_ImplVulkan_Init(&init_info, *m_RenderPass.Get());
 }
 
 std::vector<Buffer<UniformBufferObject>> Video::ConstructUniformBuffers()

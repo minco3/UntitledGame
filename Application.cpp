@@ -3,7 +3,11 @@
 #include "imgui/imgui_impl_vulkan.h"
 #include <SDL2/SDL.h>
 
-Application::Application() {}
+Application::Application()
+{
+    ImGui::CreateContext();
+    m_Video.InitImGui();
+}
 
 Application::~Application()
 {
