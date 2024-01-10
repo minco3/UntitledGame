@@ -41,6 +41,9 @@ Video::~Video()
 {
     m_Device.Get().waitIdle();
     m_Queue.waitIdle();
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
 }
 
 void Video::Render()
@@ -134,11 +137,10 @@ void Video::InitImGui()
     init_info.Device = *m_Device.Get();
     init_info.QueueFamily = m_QueueFamilyIndex;
     init_info.Queue = *m_Queue;
-    // init_info.PipelineCache = m_Pipeline.Get;
     init_info.DescriptorPool = *m_Descriptors.GetPool();
     init_info.Subpass = 0;
-    init_info.MinImageCount = 2;
-    init_info.ImageCount = 2;
+    init_info.MinImageCount = m_Swapchain.GetImageCount();
+    init_info.ImageCount = m_Swapchain.GetImageCount();
     init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     init_info.Allocator = nullptr;
     auto check_vulkan_err = [](VkResult err)

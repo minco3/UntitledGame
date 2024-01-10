@@ -12,9 +12,6 @@ Application::Application()
 
 Application::~Application()
 {
-    ImGui_ImplVulkan_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
-    ImGui::DestroyContext();
 }
 
 void Application::Run()
