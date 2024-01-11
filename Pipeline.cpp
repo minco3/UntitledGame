@@ -26,7 +26,7 @@ vk::raii::Pipeline GraphicsPipeline::CreatePipeline(
         0, sizeof(Vertex), vk::VertexInputRate::eVertex);
 
     std::array<vk::VertexInputAttributeDescription, 2> attributeDescription = {
-        {{0, 0, vk::Format::eR32G32Sfloat, offsetof(Vertex, pos)},
+        {{0, 0, vk::Format::eR32G32B32Sfloat, offsetof(Vertex, pos)},
          {1, 0, vk::Format::eR32G32B32Sfloat, offsetof(Vertex, color)}}};
 
     vk::PipelineVertexInputStateCreateInfo vertexInputState(
