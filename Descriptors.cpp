@@ -1,11 +1,9 @@
 #include "Descriptors.hpp"
 
-// TODO: maxSets needs to be revisited later
-
 Descriptors::Descriptors(
     Device& device, std::vector<Buffer<UniformBufferObject>>& uniformBuffers,
-    size_t imageCount, size_t setsPerImage)
-    : m_DescriptorPool(CreateDescriptorPool(device, imageCount*setsPerImage)),
+    size_t imageCount)
+    : m_DescriptorPool(CreateDescriptorPool(device, imageCount)),
       m_DescriptorSetLayouts(CreateDescriptorSetLayouts(device, imageCount)),
       m_DescriptorSets(CreateDescriptorSets(device))
 {
@@ -22,14 +20,17 @@ Descriptors::Descriptors(
     device.Get().updateDescriptorSets(descriptorWriteSets, nullptr);
 }
 
-vk::raii::DescriptorPool
-Descriptors::CreateDescriptorPool(Device& device, size_t maxSets)
+vk::raii::DescriptorPool Descriptors::CreateDescriptorPool(
+    Device& device, size_t imageCount) // maxSets needs to be revisited later
 {
-    vk::DescriptorPoolSize discriptorPoolSize(
-        vk::DescriptorType::eUniformBuffer, maxSets);
+    std::array<vk::DescriptorPoolSize, 2> discriptorPoolSizes{
+        {{vk::DescriptorType::eUniformBuffer,
+          static_cast<uint32_t>(imageCount)},
+         {vk::DescriptorType::eCombinedImageSampler, /*For ImGui*/
+          static_cast<uint32_t>(imageCount)}}};
     vk::DescriptorPoolCreateInfo createInfo(
-        vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet, maxSets,
-        discriptorPoolSize);
+        vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+        discriptorPoolSizes.size() * imageCount, discriptorPoolSizes);
     return device.Get().createDescriptorPool(createInfo);
 }
 

@@ -19,11 +19,18 @@ void Application::Run()
     m_Running = true;
     while (m_Running)
     {
-        Update();
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
-        ImGui::ShowDemoWindow();
+        // ImGui::ShowDemoWindow();
+        ImGui::Begin("Hello, world!");
+        ImGui::SliderFloat("color", &m_Color, 0.0f, 360.0f);
+        ImGui::SliderFloat("theta", &m_Theta, 0.0f, 360.0f);
+        ImGui::SliderFloat("x", &m_RotationAxis.x, -1.0f, 1.0f);
+        ImGui::SliderFloat("y", &m_RotationAxis.y, -1.0f, 1.0f);
+        Update();
+        ImGui::End();
+
         m_Video.Render();
     }
 }
@@ -44,6 +51,5 @@ void Application::Update()
             }
         }
     }
-    m_Video.UpdateUnformBuffers(m_Theta);
-    m_Theta += 0.1f;
+    m_Video.UpdateUnformBuffers(m_Color, m_Theta, m_RotationAxis);
 }

@@ -19,7 +19,7 @@
 Video::Video()
     : m_Window(
           "Untitled Game", {SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED},
-          {1200, 800}, SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN),
+          {800, 800}, SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN),
       m_Instance(m_Window, m_Context), m_Surface(m_Window, m_Instance),
       m_Device(m_Instance, m_Surface), m_Swapchain(m_Device, m_Surface),
       m_Queue(m_Device.Get(), m_QueueFamilyIndex, 0),
@@ -31,7 +31,7 @@ Video::Video()
       m_CommandBuffers(
           m_Device, m_QueueFamilyIndex, m_Swapchain.GetImageCount()),
       m_SyncObjects(m_Device),
-      m_Descriptors(m_Device, m_UniformBuffers, m_Swapchain.GetImageCount(), 2),
+      m_Descriptors(m_Device, m_UniformBuffers, m_Swapchain.GetImageCount()),
       m_Pipeline(m_Device, m_RenderPass, m_Surface, m_Descriptors)
 {
     // buffers
@@ -52,8 +52,8 @@ void Video::Render()
     device.waitForFences(
         *m_SyncObjects.inFlightFences.at(m_CurrentImage), VK_TRUE,
         std::numeric_limits<uint64_t>::max());
-    
-    //Render ImGui frame
+
+    // Render ImGui frame
     ImGui::Render();
     ImDrawData* draw_data = ImGui::GetDrawData();
 
@@ -110,15 +110,26 @@ void Video::Render()
     m_CurrentImage = (m_CurrentImage + 1) % m_Swapchain.GetImageCount();
 }
 
-void Video::UpdateUnformBuffers(float theta)
+void Video::UpdateUnformBuffers(
+    float color, float theta, glm::vec2 rotationAxis)
 {
     UniformBufferObject& buffer =
         m_UniformBuffers.at(m_CurrentImage).GetMemory().front();
-    buffer.rotation[0].x = cos(theta * M_PI / 180);
-    buffer.rotation[0].y = -sin(theta * M_PI / 180);
-    buffer.rotation[1].x = sin(theta * M_PI / 180);
-    buffer.rotation[1].y = cos(theta * M_PI / 180);
-    buffer.colorRotation = theta;
+    glm::mat3x3 rotationMatrix(
+        cos(theta * M_PI / 180.0f), -sin(theta * M_PI / 180.0f), 0.0f,
+        sin(theta * M_PI / 180.0f), cos(theta * M_PI / 180.0f), 0.0f, 0.0f,
+        0.0f, 1.0f);
+
+    glm::mat3x3 translationMatrix(
+        1.0f, 0.0f, rotationAxis.x, 0.0f, 1.0f, rotationAxis.y, 0.0f, 0.0f,
+        1.0f);
+    buffer.rotation =
+        (glm::inverse(translationMatrix) * rotationMatrix * translationMatrix);
+    ImGui::Separator();
+    ImGui::InputFloat4("row1", &buffer.rotation[0].x);
+    ImGui::InputFloat4("row2", &buffer.rotation[1].x);
+    ImGui::InputFloat4("row3", &buffer.rotation[2].x);
+    buffer.color = color;
 }
 
 void Video::FillVertexBuffer()
