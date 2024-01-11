@@ -25,7 +25,7 @@ Video::Video()
       m_Queue(m_Device.Get(), m_QueueFamilyIndex, 0),
       m_RenderPass(m_Device, m_Surface),
       m_VertexBuffer(
-          m_Device, vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer),
+          m_Device, cubeVertices.size(), vk::BufferUsageFlagBits::eVertexBuffer),
       m_UniformBuffers(std::move(ConstructUniformBuffers())),
       m_Framebuffers(m_Swapchain, m_RenderPass, m_Device),
       m_CommandBuffers(
@@ -88,7 +88,7 @@ void Video::Render()
         vk::PipelineBindPoint::eGraphics, *m_Pipeline.GetLayout(), 0,
         *m_Descriptors.GetSets().at(m_CurrentImage), nullptr);
 
-    commandBuffer.draw(static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+    commandBuffer.draw(static_cast<uint32_t>(cubeVertices.size()), 1, 0, 0);
     ImGui_ImplVulkan_RenderDrawData(draw_data, *commandBuffer);
     commandBuffer.endRenderPass();
     commandBuffer.end();
@@ -136,7 +136,7 @@ void Video::FillVertexBuffer()
 {
     // load hard-coded vertices into memory
     std::span<Vertex> memorySpan = m_VertexBuffer.GetMemory();
-    std::copy_n(vertices.begin(), vertices.size(), memorySpan.begin());
+    std::copy_n(cubeVertices.begin(), cubeVertices.size(), memorySpan.begin());
 }
 
 void Video::InitImGui()
