@@ -6,8 +6,7 @@ layout(location = 1) in vec3 inColor;
 layout(location = 0) out vec3 fragColor;
 
 layout(set = 0, binding = 0) uniform block {
-    mat4 rotation;
-    float colorRotation;
+    mat4 MVP;
 };
 
 // via chatgpt
@@ -18,6 +17,6 @@ vec3 hsv2rgb(vec3 c) {
 }
 
 void main() {
-    gl_Position = inPosition*vec4(rotation, 1.0);
-    fragColor = hsv2rgb(vec3(colorRotation/360.0, 1.0, 1.0));
+    gl_Position = MVP*vec4(inPosition, 1.0);
+    fragColor = inColor;
 }

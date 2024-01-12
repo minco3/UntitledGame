@@ -1,7 +1,9 @@
+#define GLM_SWIZZLE
 #include "Application.hpp"
 #include "imgui/imgui_impl_sdl2.h"
 #include "imgui/imgui_impl_vulkan.h"
 #include <SDL2/SDL.h>
+#include <glm/gtx/perpendicular.hpp>
 
 Application::Application()
 {
@@ -10,9 +12,7 @@ Application::Application()
     m_Video.InitImGui();
 }
 
-Application::~Application()
-{
-}
+Application::~Application() {}
 
 void Application::Run()
 {
@@ -24,10 +24,8 @@ void Application::Run()
         ImGui::NewFrame();
         // ImGui::ShowDemoWindow();
         ImGui::Begin("Hello, world!");
-        ImGui::SliderFloat("color", &m_Color, 0.0f, 360.0f);
-        ImGui::SliderFloat("theta", &m_Theta, 0.0f, 360.0f);
-        ImGui::SliderFloat("x", &m_RotationAxis.x, -1.0f, 1.0f);
-        ImGui::SliderFloat("y", &m_RotationAxis.y, -1.0f, 1.0f);
+        ImGui::InputFloat3("position", &m_Camera.position.x);
+        ImGui::InputFloat3("lookdir", &m_Camera.lookdir.x);
         Update();
         ImGui::End();
 
@@ -49,7 +47,59 @@ void Application::Update()
                 m_Running = false;
                 break;
             }
+            break;
+        case SDL_KEYDOWN:
+            switch (event.key.keysym.sym)
+            {
+            case SDLK_w:
+                m_Camera.position += m_Camera.lookdir;
+                break;
+            case SDLK_a:
+                m_Camera.position += glm::normalize(glm::perp(
+                    glm::vec3(-m_Camera.lookdir.y, m_Camera.lookdir.x, 0.0f),
+                    m_Camera.lookdir));
+                break;
+            case SDLK_s:
+                m_Camera.position -= m_Camera.lookdir;
+                break;
+            case SDLK_d:
+                m_Camera.position -= glm::normalize(glm::perp(
+                    glm::vec3(-m_Camera.lookdir.y, m_Camera.lookdir.x, 0.0f),
+                    m_Camera.lookdir));
+                break;
+            case SDLK_SPACE:
+                m_Camera.position += glm::vec3(0.0f, 0.0f, 1.0f);
+                break;
+            case SDLK_c:
+                m_Camera.position -= glm::vec3(0.0f, 0.0f, 1.0f);
+                break;
+            case SDLK_LEFT:
+                m_Camera.lookdir = glm::normalize(
+                    m_Camera.lookdir +
+                    0.2f * glm::normalize(glm::vec3(
+                               -m_Camera.lookdir.y, m_Camera.lookdir.x, 0.0f)));
+                break;
+            case SDLK_RIGHT:
+                m_Camera.lookdir = glm::normalize(
+                    m_Camera.lookdir -
+                    0.2f * glm::normalize(glm::vec3(
+                               -m_Camera.lookdir.y, m_Camera.lookdir.x, 0.0f)));
+                break;
+            case SDLK_UP:
+                m_Camera.lookdir = glm::normalize(
+                    m_Camera.lookdir +
+                    0.2f * glm::normalize(glm::vec3(
+                               -m_Camera.lookdir.z, 0.0f, glm::distance(m_Camera.lookdir.x, m_Camera.lookdir.y))));
+                break;
+            case SDLK_DOWN:
+                m_Camera.lookdir = glm::normalize(
+                    m_Camera.lookdir -
+                    0.2f * glm::normalize(glm::vec3(
+                               -m_Camera.lookdir.z, 0.0f, glm::distance(m_Camera.lookdir.x, m_Camera.lookdir.y))));
+                break;
+            }
+            break;
         }
     }
-    m_Video.UpdateUnformBuffers(m_Color, m_Theta, m_RotationAxis);
+    m_Video.UpdateUnformBuffers(m_Camera.GetMVP());
 }

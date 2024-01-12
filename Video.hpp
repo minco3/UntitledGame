@@ -25,7 +25,7 @@ public:
     ~Video();
 
     void Render();
-    void UpdateUnformBuffers(float color, float theta, glm::vec2 rotationAxis);
+    void UpdateUnformBuffers(const glm::mat4& MVP);
     void InitImGui();
     
 private:

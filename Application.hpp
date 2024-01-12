@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Video.hpp"
+#include "Camera.hpp"
 #include <glm/vec2.hpp>
 
 class Application
@@ -14,7 +15,5 @@ public:
 private:
     Video m_Video;
     bool m_Running;
-    float m_Color;
-    float m_Theta;
-    glm::vec2 m_RotationAxis;
+    Camera m_Camera;
 };

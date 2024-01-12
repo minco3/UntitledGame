@@ -25,7 +25,8 @@ Video::Video()
       m_Queue(m_Device.Get(), m_QueueFamilyIndex, 0),
       m_RenderPass(m_Device, m_Surface),
       m_VertexBuffer(
-          m_Device, cubeVertices.size(), vk::BufferUsageFlagBits::eVertexBuffer),
+          m_Device, cubeVertices.size(),
+          vk::BufferUsageFlagBits::eVertexBuffer),
       m_UniformBuffers(std::move(ConstructUniformBuffers())),
       m_Framebuffers(m_Swapchain, m_RenderPass, m_Device),
       m_CommandBuffers(
@@ -110,26 +111,9 @@ void Video::Render()
     m_CurrentImage = (m_CurrentImage + 1) % m_Swapchain.GetImageCount();
 }
 
-void Video::UpdateUnformBuffers(
-    float color, float theta, glm::vec2 rotationAxis)
+void Video::UpdateUnformBuffers(const glm::mat4x4& MVP)
 {
-    UniformBufferObject& buffer =
-        m_UniformBuffers.at(m_CurrentImage).GetMemory().front();
-    glm::mat3x3 rotationMatrix(
-        cos(theta * M_PI / 180.0f), -sin(theta * M_PI / 180.0f), 0.0f,
-        sin(theta * M_PI / 180.0f), cos(theta * M_PI / 180.0f), 0.0f, 0.0f,
-        0.0f, 1.0f);
-
-    glm::mat3x3 translationMatrix(
-        1.0f, 0.0f, rotationAxis.x, 0.0f, 1.0f, rotationAxis.y, 0.0f, 0.0f,
-        1.0f);
-    buffer.rotation =
-        (glm::inverse(translationMatrix) * rotationMatrix * translationMatrix);
-    ImGui::Separator();
-    ImGui::InputFloat4("row1", &buffer.rotation[0].x);
-    ImGui::InputFloat4("row2", &buffer.rotation[1].x);
-    ImGui::InputFloat4("row3", &buffer.rotation[2].x);
-    buffer.color = color;
+    m_UniformBuffers.at(m_CurrentImage).GetMemory().front().MVP = MVP;
 }
 
 void Video::FillVertexBuffer()

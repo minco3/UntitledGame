@@ -42,9 +42,9 @@ vk::raii::Pipeline GraphicsPipeline::CreatePipeline(
 
     vk::PipelineViewportStateCreateInfo viewportState({}, viewport, scissor);
 
-    vk::PipelineRasterizationStateCreateInfo rasteriztionState{};
-    rasteriztionState.setCullMode(vk::CullModeFlagBits::eBack);
-    rasteriztionState.setLineWidth(1.0f);
+    vk::PipelineRasterizationStateCreateInfo rasterizationState{};
+    rasterizationState.setCullMode(vk::CullModeFlagBits::eBack);
+    rasterizationState.setLineWidth(1.0f);
 
     vk::PipelineMultisampleStateCreateInfo multisampleState{};
 
@@ -64,7 +64,7 @@ vk::raii::Pipeline GraphicsPipeline::CreatePipeline(
 
     vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo(
         {}, shaderStages, &vertexInputState, &inputAssemblyState, {},
-        &viewportState, &rasteriztionState, &multisampleState,
+        &viewportState, &rasterizationState, &multisampleState,
         &depthStencilState, &colorBlendState, {}, *m_PipelineLayout,
         *renderPass.Get());
 
