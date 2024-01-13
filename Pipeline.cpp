@@ -26,7 +26,7 @@ vk::raii::Pipeline GraphicsPipeline::CreatePipeline(
         0, sizeof(Vertex), vk::VertexInputRate::eVertex);
 
     std::array<vk::VertexInputAttributeDescription, 2> attributeDescription = {
-        {{0, 0, vk::Format::eR32G32Sfloat, offsetof(Vertex, pos)},
+        {{0, 0, vk::Format::eR32G32B32Sfloat, offsetof(Vertex, pos)},
          {1, 0, vk::Format::eR32G32B32Sfloat, offsetof(Vertex, color)}}};
 
     vk::PipelineVertexInputStateCreateInfo vertexInputState(
@@ -42,9 +42,9 @@ vk::raii::Pipeline GraphicsPipeline::CreatePipeline(
 
     vk::PipelineViewportStateCreateInfo viewportState({}, viewport, scissor);
 
-    vk::PipelineRasterizationStateCreateInfo rasteriztionState{};
-    rasteriztionState.setCullMode(vk::CullModeFlagBits::eBack);
-    rasteriztionState.setLineWidth(1.0f);
+    vk::PipelineRasterizationStateCreateInfo rasterizationState{};
+    rasterizationState.setCullMode(vk::CullModeFlagBits::eBack);
+    rasterizationState.setLineWidth(1.0f);
 
     vk::PipelineMultisampleStateCreateInfo multisampleState{};
 
@@ -64,7 +64,7 @@ vk::raii::Pipeline GraphicsPipeline::CreatePipeline(
 
     vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo(
         {}, shaderStages, &vertexInputState, &inputAssemblyState, {},
-        &viewportState, &rasteriztionState, &multisampleState,
+        &viewportState, &rasterizationState, &multisampleState,
         &depthStencilState, &colorBlendState, {}, *m_PipelineLayout,
         *renderPass.Get());
 

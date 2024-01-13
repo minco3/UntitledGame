@@ -25,8 +25,11 @@ public:
     ~Video();
 
     void Render();
-    void UpdateUnformBuffers(float theta);
-
+    void UpdateUniformBuffers(const glm::mat4& MVP);
+    void InitImGui();
+    void CaptureCursor(bool state);
+    vk::Extent2D GetScreenSize() const;
+    
 private:
     void FillVertexBuffer();
     std::vector<Buffer<UniformBufferObject>> ConstructUniformBuffers();
