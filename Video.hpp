@@ -25,8 +25,9 @@ public:
     ~Video();
 
     void Render();
-    void UpdateUnformBuffers(const glm::mat4& MVP);
+    void UpdateUniformBuffers(const glm::mat4& MVP);
     void InitImGui();
+    void CaptureCursor(bool state);
     
 private:
     void FillVertexBuffer();

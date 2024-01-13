@@ -38,6 +38,7 @@ Video::Video()
     // buffers
     FillVertexBuffer();
 }
+
 Video::~Video()
 {
     m_Device.Get().waitIdle();
@@ -111,10 +112,16 @@ void Video::Render()
     m_CurrentImage = (m_CurrentImage + 1) % m_Swapchain.GetImageCount();
 }
 
-void Video::UpdateUnformBuffers(const glm::mat4x4& MVP)
+void Video::UpdateUniformBuffers(const glm::mat4x4& MVP)
 {
     m_UniformBuffers.at(m_CurrentImage).GetMemory().front().MVP = MVP;
 }
+
+void Video::CaptureCursor(bool state)
+{
+    SDL_SetWindowMouseGrab(m_Window.Get(), state ? SDL_TRUE : SDL_FALSE);
+}
+
 
 void Video::FillVertexBuffer()
 {

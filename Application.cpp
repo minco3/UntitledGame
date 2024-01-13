@@ -6,6 +6,7 @@
 #include <glm/gtx/perpendicular.hpp>
 
 Application::Application()
+    : m_LastTimePoint(std::chrono::steady_clock::now())
 {
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
@@ -26,6 +27,9 @@ void Application::Run()
         ImGui::Begin("Hello, world!");
         ImGui::InputFloat3("position", &m_Camera.position.x);
         ImGui::InputFloat3("lookdir", &m_Camera.lookdir.x);
+        ImGui::Text(
+            "Application average %.3f ms/frame (%.1f FPS)",
+            1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         Update();
         ImGui::End();
 
@@ -34,10 +38,13 @@ void Application::Run()
 }
 void Application::Update()
 {
+    auto deltaT = std::chrono::steady_clock::now() - m_LastTimePoint;
+    m_LastTimePoint = std::chrono::steady_clock::now();
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
         ImGui_ImplSDL2_ProcessEvent(&event);
+        m_Camera.processEvent(event);
         switch (event.type)
         {
         case SDL_WINDOWEVENT:
@@ -48,58 +55,22 @@ void Application::Update()
                 break;
             }
             break;
+        case SDL_MOUSEBUTTONDOWN:
+            if (event.button.button == SDL_BUTTON_LEFT)
+            {
+                SDL_SetRelativeMouseMode(SDL_TRUE);
+            }
+            break;
         case SDL_KEYDOWN:
             switch (event.key.keysym.sym)
             {
-            case SDLK_w:
-                m_Camera.position += m_Camera.lookdir;
-                break;
-            case SDLK_a:
-                m_Camera.position += glm::normalize(glm::perp(
-                    glm::vec3(-m_Camera.lookdir.y, m_Camera.lookdir.x, 0.0f),
-                    m_Camera.lookdir));
-                break;
-            case SDLK_s:
-                m_Camera.position -= m_Camera.lookdir;
-                break;
-            case SDLK_d:
-                m_Camera.position -= glm::normalize(glm::perp(
-                    glm::vec3(-m_Camera.lookdir.y, m_Camera.lookdir.x, 0.0f),
-                    m_Camera.lookdir));
-                break;
-            case SDLK_SPACE:
-                m_Camera.position += glm::vec3(0.0f, 0.0f, 1.0f);
-                break;
-            case SDLK_c:
-                m_Camera.position -= glm::vec3(0.0f, 0.0f, 1.0f);
-                break;
-            case SDLK_LEFT:
-                m_Camera.lookdir = glm::normalize(
-                    m_Camera.lookdir +
-                    0.2f * glm::normalize(glm::vec3(
-                               -m_Camera.lookdir.y, m_Camera.lookdir.x, 0.0f)));
-                break;
-            case SDLK_RIGHT:
-                m_Camera.lookdir = glm::normalize(
-                    m_Camera.lookdir -
-                    0.2f * glm::normalize(glm::vec3(
-                               -m_Camera.lookdir.y, m_Camera.lookdir.x, 0.0f)));
-                break;
-            case SDLK_UP:
-                m_Camera.lookdir = glm::normalize(
-                    m_Camera.lookdir +
-                    0.2f * glm::normalize(glm::vec3(
-                               -m_Camera.lookdir.z, 0.0f, glm::distance(m_Camera.lookdir.x, m_Camera.lookdir.y))));
-                break;
-            case SDLK_DOWN:
-                m_Camera.lookdir = glm::normalize(
-                    m_Camera.lookdir -
-                    0.2f * glm::normalize(glm::vec3(
-                               -m_Camera.lookdir.z, 0.0f, glm::distance(m_Camera.lookdir.x, m_Camera.lookdir.y))));
+            case SDLK_ESCAPE:
+                SDL_SetRelativeMouseMode(SDL_FALSE);
                 break;
             }
             break;
         }
     }
-    m_Video.UpdateUnformBuffers(m_Camera.GetMVP());
+    m_Camera.move(deltaT);
+    m_Video.UpdateUniformBuffers(m_Camera.GetMVP());
 }
