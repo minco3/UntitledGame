@@ -112,7 +112,7 @@ void Video::Render()
     m_CurrentImage = (m_CurrentImage + 1) % m_Swapchain.GetImageCount();
 }
 
-void Video::UpdateUniformBuffers(const glm::mat4x4& MVP)
+void Video::UpdateUniformBuffers(const glm::mat4& MVP)
 {
     m_UniformBuffers.at(m_CurrentImage).GetMemory().front().MVP = MVP;
 }
