@@ -21,7 +21,7 @@ std::vector<Shader> LoadShaders(vk::raii::Device& device)
          std::filesystem::directory_iterator(shader_directory))
     {
         // shaderc::Compiler c;
-        if (entry.path().extension() == ".spv") // a.frag(.spv)
+        if (entry.path().extension().string() == ".spv") // a.frag(.spv)
         {
             std::string name =
                 entry.path().stem().stem().string(); // (a).frag.spv
@@ -41,7 +41,7 @@ std::vector<Shader> LoadShaders(vk::raii::Device& device)
             vertShaderPath.append(name + ".vert.spv");
             std::filesystem::path fragShaderPath = shader_directory;
             fragShaderPath.append(name + ".frag.spv");
-            if (shaderType == ".vert")
+            if (shaderType.string() == ".vert")
             {
                 if (!std::filesystem::exists(fragShaderPath))
                 {
@@ -50,7 +50,7 @@ std::vector<Shader> LoadShaders(vk::raii::Device& device)
                     continue;
                 }
             }
-            else if (shaderType == ".frag")
+            else if (shaderType.string() == ".frag")
             {
                 if (!std::filesystem::exists(vertShaderPath))
                 {
