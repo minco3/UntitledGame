@@ -1,6 +1,7 @@
 #include "Shader.hpp"
 #include <algorithm>
 #include <filesystem>
+#include <shaderc/shaderc.hpp>
 
 Shader::Shader(
     vk::raii::Device& device, const std::string& _name,
@@ -104,4 +105,9 @@ std::vector<Shader> LoadShaders(vk::raii::Device& device)
         LogWarning("No shaders constructed!");
     }
     return shaders;
+}
+
+Shader CompileShader(vk::raii::Device& device)
+{
+    
 }

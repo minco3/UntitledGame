@@ -18,3 +18,4 @@ struct Shader
 };
 
 std::vector<Shader> LoadShaders(vk::raii::Device& device);
+Shader CompileShader(vk::raii::Device& device);
