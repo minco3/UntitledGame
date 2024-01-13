@@ -1,4 +1,3 @@
-#define GLM_SWIZZLE
 #include "Application.hpp"
 #include "imgui/imgui_impl_sdl2.h"
 #include "imgui/imgui_impl_vulkan.h"
