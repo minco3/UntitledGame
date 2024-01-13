@@ -5,8 +5,7 @@
 #include <SDL2/SDL.h>
 #include <glm/gtx/perpendicular.hpp>
 
-Application::Application()
-    : m_LastTimePoint(std::chrono::steady_clock::now())
+Application::Application() : m_LastTimePoint(std::chrono::steady_clock::now())
 {
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
@@ -54,6 +53,10 @@ void Application::Update()
             {
             case SDL_WINDOWEVENT_CLOSE:
                 m_Running = false;
+                break;
+            case SDL_WINDOWEVENT_RESIZED:
+                m_Video.Resize();
+                m_Camera.setAspect(event.window.data1, event.window.data2);
                 break;
             }
             break;
