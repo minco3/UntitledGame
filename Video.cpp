@@ -19,7 +19,7 @@
 Video::Video()
     : m_Window(
           "Untitled Game", {SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED},
-          {800, 800}, SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN),
+          {1200, 800}, SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN),
       m_Instance(m_Window, m_Context), m_Surface(m_Window, m_Instance),
       m_Device(m_Instance, m_Surface), m_Swapchain(m_Device, m_Surface),
       m_Queue(m_Device.Get(), m_QueueFamilyIndex, 0),
@@ -120,6 +120,11 @@ void Video::UpdateUniformBuffers(const glm::mat4x4& MVP)
 void Video::CaptureCursor(bool state)
 {
     SDL_SetWindowMouseGrab(m_Window.Get(), state ? SDL_TRUE : SDL_FALSE);
+}
+
+vk::Extent2D Video::GetScreenSize() const
+{
+    return m_Swapchain.GetExtent();
 }
 
 

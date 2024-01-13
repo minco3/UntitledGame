@@ -14,8 +14,8 @@ public:
         return m_SwapchainImageViews;
     }
     constexpr vk::raii::SwapchainKHR& Get() { return m_Swapchain; }
-    constexpr vk::Extent2D GetExtent() { return m_Extent; }
-    constexpr size_t GetImageCount() { return m_ImageCount; }
+    constexpr vk::Extent2D GetExtent() const { return m_Extent; }
+    constexpr size_t GetImageCount() const { return m_ImageCount; }
 
 private:
     std::vector<vk::raii::ImageView> m_SwapchainImageViews;

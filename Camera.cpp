@@ -17,7 +17,7 @@ glm::mat4x4 Camera::GetMVP()
     glm::mat4x4 view =
         glm::lookAt(position, position + lookdir, {0.0f, 0.0f, 1.0f});
     glm::mat4x4 projection =
-        glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 100.0f);
+        glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
     glm::mat4x4 clip = glm::mat4x4(
         1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f,
         0.0f, 0.0f, 0.5f,
@@ -92,4 +92,9 @@ void Camera::processEvent(SDL_Event& event)
         }
         break;
     }
+}
+
+void Camera::setAspect(uint32_t width, uint32_t height)
+{
+    aspect = static_cast<float>(width) / static_cast<float>(height);
 }

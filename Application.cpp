@@ -11,6 +11,8 @@ Application::Application()
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
     m_Video.InitImGui();
+    vk::Extent2D extent = m_Video.GetScreenSize();
+    m_Camera.setAspect(extent.width, extent.height);
 }
 
 Application::~Application() {}

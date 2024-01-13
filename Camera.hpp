@@ -32,7 +32,9 @@ struct Camera
     glm::mat4x4 GetMVP();
     void move(std::chrono::nanoseconds deltaT);
     void processEvent(SDL_Event& event);
+    void setAspect(uint32_t width, uint32_t height);
     glm::vec3 position, lookdir, velocity;
     float yaw, pitch;
+    float aspect = 1.0f;
     vk::Flags<Directions> movementBits;
 };
