@@ -19,7 +19,8 @@
 Video::Video()
     : m_Window(
           "Untitled Game", {SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED},
-          {1200, 800}, SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN),
+          {1200, 800},
+          SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN),
       m_Instance(m_Window, m_Context), m_Surface(m_Window, m_Instance),
       m_Device(m_Instance, m_Surface), m_Swapchain(m_Device, m_Surface),
       m_Queue(m_Device.Get(), m_QueueFamilyIndex, 0),
@@ -112,6 +113,21 @@ void Video::Render()
     m_CurrentImage = (m_CurrentImage + 1) % m_Swapchain.GetImageCount();
 }
 
+void Video::Resize()
+{
+    m_Surface.GetSurfaceCapabilities(m_Device);
+    RecreateRenderables();
+    // throw std::runtime_error("debug");
+}
+
+void Video::RecreateRenderables()
+{
+    m_Device.Get().waitIdle();
+
+    m_Swapchain = Swapchain(m_Device, m_Surface);
+    m_Framebuffers = Framebuffers(m_Swapchain, m_RenderPass, m_Device);
+}
+
 void Video::UpdateUniformBuffers(const glm::mat4& MVP)
 {
     m_UniformBuffers.at(m_CurrentImage).GetMemory().front().MVP = MVP;
@@ -122,10 +138,7 @@ void Video::CaptureCursor(bool state)
     SDL_SetWindowMouseGrab(m_Window.Get(), state ? SDL_TRUE : SDL_FALSE);
 }
 
-vk::Extent2D Video::GetScreenSize() const
-{
-    return m_Swapchain.GetExtent();
-}
+vk::Extent2D Video::GetScreenSize() const { return m_Swapchain.GetExtent(); }
 
 void Video::FillVertexBuffer()
 {
