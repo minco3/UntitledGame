@@ -25,8 +25,9 @@ public:
     ~Video();
 
     void Render();
-    void UpdateUnformBuffers(float theta);
-
+    void UpdateUnformBuffers(float color, float theta, glm::vec2 rotationAxis);
+    void InitImGui();
+    
 private:
     void FillVertexBuffer();
     std::vector<Buffer<UniformBufferObject>> ConstructUniformBuffers();

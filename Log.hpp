@@ -4,7 +4,6 @@
 #include <fmt/ostream.h>
 #include <iostream>
 #include <stdexcept>
-#include <vulkan/vulkan.h>
 
 void LogError(const std::string& message);
 
