@@ -127,7 +127,6 @@ vk::Extent2D Video::GetScreenSize() const
     return m_Swapchain.GetExtent();
 }
 
-
 void Video::FillVertexBuffer()
 {
     // load hard-coded vertices into memory
