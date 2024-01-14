@@ -124,7 +124,8 @@ void Video::RecreateRenderables()
 {
     m_Device.Get().waitIdle();
 
-    m_Swapchain.Recreate(m_Device, m_Surface);
+    m_Swapchain.Clear();
+    m_Swapchain = Swapchain(m_Device, m_Surface);
     m_Framebuffers = Framebuffers(m_Swapchain, m_RenderPass, m_Device);
     m_Pipeline = GraphicsPipeline(m_Device, m_RenderPass, m_Surface, m_Descriptors);
 }

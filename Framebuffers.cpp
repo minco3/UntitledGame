@@ -6,13 +6,6 @@ Framebuffers::Framebuffers(
 {
 }
 
-void Framebuffers::Recreate(
-    Swapchain& swapchain, RenderPass& renderPass, Device& device)
-{
-    m_Framebuffers.clear();
-    m_Framebuffers = CreateFramebuffers(swapchain, renderPass, device);
-}
-
 vk::raii::Framebuffer& Framebuffers::operator[](size_t index)
 {
     return m_Framebuffers.at(index);

@@ -10,7 +10,6 @@ class Framebuffers
 public:
     Framebuffers(Swapchain& swapchain, RenderPass& renderPass, Device& device);
     
-    void Recreate(Swapchain& swapchain, RenderPass& renderPass, Device& device);
     vk::raii::Framebuffer& operator[](size_t index);
 
 private:
