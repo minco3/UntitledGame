@@ -9,7 +9,7 @@ class Swapchain
 public:
     Swapchain(Device& device, Surface& surface);
 
-    void Recreate(Device& device, Surface& surface);
+    void Clear();
     constexpr std::vector<vk::raii::ImageView>& GetImageViews()
     {
         return m_SwapchainImageViews;
