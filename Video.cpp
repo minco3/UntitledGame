@@ -124,8 +124,8 @@ void Video::RecreateRenderables()
 {
     m_Device.Get().waitIdle();
 
-    m_Swapchain = Swapchain(m_Device, m_Surface);
-    m_Framebuffers = Framebuffers(m_Swapchain, m_RenderPass, m_Device);
+    m_Swapchain.Recreate(m_Device, m_Surface);
+    m_Framebuffers.Recreate(m_Swapchain, m_RenderPass, m_Device);
 }
 
 void Video::UpdateUniformBuffers(const glm::mat4& MVP)
