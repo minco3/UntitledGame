@@ -4,6 +4,8 @@
 #include "Pipeline.hpp"
 #include "UniformBuffer.hpp"
 #include "Vertex.hpp"
+#include "imgui/imgui_impl_sdl2.h"
+#include "imgui/imgui_impl_vulkan.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_video.h>
 #include <SDL2/SDL_vulkan.h>
@@ -17,13 +19,15 @@
 Video::Video()
     : m_Window(
           "Untitled Game", {SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED},
-          {1200, 800}, SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN),
+          {1200, 800},
+          SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN),
       m_Instance(m_Window, m_Context), m_Surface(m_Window, m_Instance),
       m_Device(m_Instance, m_Surface), m_Swapchain(m_Device, m_Surface),
       m_Queue(m_Device.Get(), m_QueueFamilyIndex, 0),
       m_RenderPass(m_Device, m_Surface),
       m_VertexBuffer(
-          m_Device, vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer),
+          m_Device, cubeVertices.size(),
+          vk::BufferUsageFlagBits::eVertexBuffer),
       m_UniformBuffers(std::move(ConstructUniformBuffers())),
       m_Framebuffers(m_Swapchain, m_RenderPass, m_Device),
       m_CommandBuffers(
@@ -35,10 +39,14 @@ Video::Video()
     // buffers
     FillVertexBuffer();
 }
+
 Video::~Video()
 {
     m_Device.Get().waitIdle();
     m_Queue.waitIdle();
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
 }
 
 void Video::Render()
@@ -47,6 +55,10 @@ void Video::Render()
     device.waitForFences(
         *m_SyncObjects.inFlightFences.at(m_CurrentImage), VK_TRUE,
         std::numeric_limits<uint64_t>::max());
+
+    // Render ImGui frame
+    ImGui::Render();
+    ImDrawData* draw_data = ImGui::GetDrawData();
 
     device.resetFences(*m_SyncObjects.inFlightFences.at(m_CurrentImage));
     auto [result, imageIndex] = m_Swapchain.Get().acquireNextImage(
@@ -79,7 +91,8 @@ void Video::Render()
         vk::PipelineBindPoint::eGraphics, *m_Pipeline.GetLayout(), 0,
         *m_Descriptors.GetSets().at(m_CurrentImage), nullptr);
 
-    commandBuffer.draw(static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+    commandBuffer.draw(static_cast<uint32_t>(cubeVertices.size()), 1, 0, 0);
+    ImGui_ImplVulkan_RenderDrawData(draw_data, *commandBuffer);
     commandBuffer.endRenderPass();
     commandBuffer.end();
 
@@ -100,22 +113,66 @@ void Video::Render()
     m_CurrentImage = (m_CurrentImage + 1) % m_Swapchain.GetImageCount();
 }
 
-void Video::UpdateUnformBuffers(float theta)
+void Video::Resize()
 {
-    UniformBufferObject& buffer =
-        m_UniformBuffers.at(m_CurrentImage).GetMemory().front();
-    buffer.rotation[0].x = cos(theta * M_PI / 180);
-    buffer.rotation[0].y = -sin(theta * M_PI / 180);
-    buffer.rotation[1].x = sin(theta * M_PI / 180);
-    buffer.rotation[1].y = cos(theta * M_PI / 180);
-    buffer.colorRotation = theta;
+    m_Surface.GetSurfaceCapabilities(m_Device);
+    RecreateRenderables();
+    // throw std::runtime_error("debug");
 }
+
+void Video::RecreateRenderables()
+{
+    m_Device.Get().waitIdle();
+
+    m_Swapchain.Clear();
+    m_Swapchain = Swapchain(m_Device, m_Surface);
+    m_Framebuffers = Framebuffers(m_Swapchain, m_RenderPass, m_Device);
+    m_Pipeline = GraphicsPipeline(m_Device, m_RenderPass, m_Surface, m_Descriptors);
+}
+
+void Video::UpdateUniformBuffers(const glm::mat4& MVP)
+{
+    m_UniformBuffers.at(m_CurrentImage).GetMemory().front().MVP = MVP;
+}
+
+void Video::CaptureCursor(bool state)
+{
+    SDL_SetWindowMouseGrab(m_Window.Get(), state ? SDL_TRUE : SDL_FALSE);
+}
+
+vk::Extent2D Video::GetScreenSize() const { return m_Swapchain.GetExtent(); }
 
 void Video::FillVertexBuffer()
 {
     // load hard-coded vertices into memory
     std::span<Vertex> memorySpan = m_VertexBuffer.GetMemory();
-    std::copy_n(vertices.begin(), vertices.size(), memorySpan.begin());
+    std::copy_n(cubeVertices.begin(), cubeVertices.size(), memorySpan.begin());
+}
+
+void Video::InitImGui()
+{
+    ImGui_ImplSDL2_InitForVulkan(m_Window.Get());
+    ImGui_ImplVulkan_InitInfo init_info = {};
+    init_info.Instance = *m_Instance.Get();
+    init_info.PhysicalDevice = *m_Device.GetPhysicalDevice();
+    init_info.Device = *m_Device.Get();
+    init_info.QueueFamily = m_QueueFamilyIndex;
+    init_info.Queue = *m_Queue;
+    init_info.DescriptorPool = *m_Descriptors.GetPool();
+    init_info.Subpass = 0;
+    init_info.MinImageCount = m_Swapchain.GetImageCount();
+    init_info.ImageCount = m_Swapchain.GetImageCount();
+    init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+    init_info.Allocator = nullptr;
+    auto check_vulkan_err = [](VkResult err)
+    {
+        if (vk::Result(err) != vk::Result::eSuccess)
+        {
+            throw vk::SystemError(std::error_code(vk::Result(err)));
+        }
+    };
+    init_info.CheckVkResultFn = check_vulkan_err;
+    ImGui_ImplVulkan_Init(&init_info, *m_RenderPass.Get());
 }
 
 std::vector<Buffer<UniformBufferObject>> Video::ConstructUniformBuffers()

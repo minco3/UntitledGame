@@ -9,20 +9,22 @@ class Swapchain
 public:
     Swapchain(Device& device, Surface& surface);
 
+    void Clear();
     constexpr std::vector<vk::raii::ImageView>& GetImageViews()
     {
         return m_SwapchainImageViews;
     }
     constexpr vk::raii::SwapchainKHR& Get() { return m_Swapchain; }
-    constexpr vk::Extent2D GetExtent() { return m_Extent; }
-    constexpr size_t GetImageCount() { return m_ImageCount; }
+    constexpr vk::Extent2D GetExtent() const { return m_Extent; }
+    constexpr size_t GetImageCount() const { return m_SwapchainImageViews.size(); }
 
 private:
-    std::vector<vk::raii::ImageView> m_SwapchainImageViews;
     vk::raii::SwapchainKHR CreateSwapchain(Device& device, Surface& surface);
-    void CreateSwapchainImageViews(
+    std::vector<vk::raii::ImageView> CreateSwapchainImageViews(
         vk::raii::Device& device, vk::SurfaceFormatKHR surfaceFormat);
+
+private:
     vk::raii::SwapchainKHR m_Swapchain;
-    size_t m_ImageCount;
+    std::vector<vk::raii::ImageView> m_SwapchainImageViews;
     vk::Extent2D m_Extent;
 };
