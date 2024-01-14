@@ -2,8 +2,14 @@
 #include "Log.hpp"
 
 DirectoryWatcher::DirectoryWatcher()
-    : m_WatcherThread(&DirectoryWatcher::start, this)
+    : m_Running(true), m_WatcherThread(&DirectoryWatcher::start, this)
 {
+}
+
+DirectoryWatcher::~DirectoryWatcher()
+{
+    m_Running = false;
+    m_WatcherThread.join();
 }
 
 void DirectoryWatcher::SubscribeToDirectory(
@@ -21,7 +27,7 @@ void DirectoryWatcher::SubscribeToDirectory(
 
 void DirectoryWatcher::start()
 {
-    while (true)
+    while (m_Running)
     {
         std::this_thread::sleep_for(delay);
         if (!m_DirectoryMutex.try_lock())

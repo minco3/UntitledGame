@@ -13,6 +13,7 @@ class DirectoryWatcher
 {
 public:
     DirectoryWatcher();
+    ~DirectoryWatcher();
     void SubscribeToDirectory(const std::filesystem::path& directory);
 
 private:
@@ -21,5 +22,6 @@ private:
     std::vector<std::filesystem::path> m_Directories;
     std::unordered_map<std::string, std::filesystem::file_time_type> m_Files;
     std::mutex m_DirectoryMutex;
+    bool m_Running;
     std::thread m_WatcherThread;
 };
