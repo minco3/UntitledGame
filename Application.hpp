@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Video.hpp"
 #include "Camera.hpp"
-#include <glm/vec2.hpp>
+#include "DirectoryWatcher.hpp"
+#include "Video.hpp"
 #include <chrono>
 
 class Application
@@ -18,5 +18,6 @@ private:
     bool m_Running;
     bool m_CaptureMouse;
     Camera m_Camera;
+    DirectoryWatcher m_DirectoryWatcher;
     std::chrono::steady_clock::time_point m_LastTimePoint;
 };

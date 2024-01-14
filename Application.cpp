@@ -11,6 +11,9 @@ Application::Application() : m_LastTimePoint(std::chrono::steady_clock::now())
     m_Video.InitImGui();
     vk::Extent2D extent = m_Video.GetScreenSize();
     m_Camera.setAspect(extent.width, extent.height);
+
+    m_DirectoryWatcher.SubscribeToDirectory(
+        std::filesystem::path(WORKING_DIRECTORY));
 }
 
 Application::~Application() {}
