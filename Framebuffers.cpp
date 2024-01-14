@@ -1,6 +1,4 @@
 #include "Framebuffers.hpp"
-#include <algorithm>  //for_each
-#include <functional> //mem_fn
 
 Framebuffers::Framebuffers(
     Swapchain& swapchain, RenderPass& renderPass, Device& device)
@@ -11,10 +9,7 @@ Framebuffers::Framebuffers(
 void Framebuffers::Recreate(
     Swapchain& swapchain, RenderPass& renderPass, Device& device)
 {
-    // lovely
-    std::ranges::for_each(
-        m_Framebuffers, std::mem_fn(&vk::raii::Framebuffer::clear));
-
+    m_Framebuffers.clear();
     m_Framebuffers = CreateFramebuffers(swapchain, renderPass, device);
 }
 
