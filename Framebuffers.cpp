@@ -13,7 +13,7 @@ void Framebuffers::Recreate(
 {
     // lovely
     std::ranges::for_each(
-        m_Framebuffers, std::mem_fn(&vk::raii::Framebuffer::release));
+        m_Framebuffers, std::mem_fn(&vk::raii::Framebuffer::clear));
 
     m_Framebuffers = CreateFramebuffers(swapchain, renderPass, device);
 }

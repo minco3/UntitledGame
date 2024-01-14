@@ -1,4 +1,6 @@
 #include "Swapchain.hpp"
+#include <algorithm>
+#include <functional>
 
 Swapchain::Swapchain(Device& device, Surface& surface)
     : m_Swapchain(CreateSwapchain(device, surface)),
@@ -10,7 +12,8 @@ Swapchain::Swapchain(Device& device, Surface& surface)
 
 void Swapchain::Recreate(Device& device, Surface& surface)
 {
-    m_Swapchain.release();
+    std::ranges::for_each(m_SwapchainImageViews, std::mem_fn(&vk::raii::ImageView::clear));
+    m_Swapchain.clear();
     m_Swapchain = CreateSwapchain(device, surface);
     m_SwapchainImageViews = CreateSwapchainImageViews(device.Get(), surface.surfaceFormat);
     m_Extent = surface.surfaceCapabilities.currentExtent;
