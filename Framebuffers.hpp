@@ -9,8 +9,12 @@ class Framebuffers
 {
 public:
     Framebuffers(Swapchain& swapchain, RenderPass& renderPass, Device& device);
+    
+    void Recreate(Swapchain& swapchain, RenderPass& renderPass, Device& device);
     vk::raii::Framebuffer& operator[](size_t index);
 
 private:
+    std::vector<vk::raii::Framebuffer> CreateFramebuffers(Swapchain& swapchain, RenderPass& renderPass, Device& device);
+
     std::vector<vk::raii::Framebuffer> m_Framebuffers;
 };
