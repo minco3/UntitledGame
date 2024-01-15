@@ -34,28 +34,28 @@ void DirectoryWatcher::start()
         {
             continue;
         }
-        for (const auto& [path, last_modified] : m_Files)
+        for (auto& directory : m_Directories)
         {
-            if (!std::filesystem::exists(path))
+            for (const auto& [path, last_modified] : directory.files)
             {
-                std::cout << "file erased: " << path << '\n';
-                m_Files.erase(path);
+                if (!std::filesystem::exists(path))
+                {
+                    std::cout << "file erased: " << path << '\n';
+                    directory.files.erase(path);
+                }
             }
-        }
-        for (const auto& directory : m_Directories)
-        {
             for (const auto& file :
-                 std::filesystem::recursive_directory_iterator(directory))
+                 std::filesystem::recursive_directory_iterator(directory.path))
             {
                 const std::filesystem::path path = file.path();
                 const std::filesystem::file_time_type last_write_time =
                     file.last_write_time();
-                const auto it = m_Files.find(path);
+                const auto it = directory.files.find(path);
 
-                if (it == m_Files.end())
+                if (it == directory.files.end())
                 {
                     std::cout << "file created: " << path.string() << '\n';
-                    m_Files.insert({path.string(), last_write_time});
+                    directory.files.insert({path.string(), last_write_time});
                 }
                 else if (it->second != last_write_time)
                 {
@@ -71,11 +71,12 @@ void DirectoryWatcher::start()
 void DirectoryWatcher::AddDirectory(const std::filesystem::path& directory)
 {
     m_DirectoryMutex.lock();
-    m_Directories.push_back(directory);
+    std::unordered_map<std::string, std::filesystem::file_time_type> files;
     for (const auto& file :
          std::filesystem::recursive_directory_iterator(directory))
     {
-        m_Files.insert({file.path().string(), file.last_write_time()});
+        files.insert({file.path().string(), file.last_write_time()});
     }
+    m_Directories.push_back({directory, files});
     m_DirectoryMutex.unlock();
 }

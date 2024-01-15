@@ -11,6 +11,12 @@ constexpr const std::chrono::duration delay = std::chrono::milliseconds(500);
 
 class DirectoryWatcher
 {
+    struct Directory
+    {
+        std::filesystem::path path;
+        std::unordered_map<std::string, std::filesystem::file_time_type> files;
+    };
+
 public:
     DirectoryWatcher();
     ~DirectoryWatcher();
@@ -19,8 +25,7 @@ public:
 private:
     void start();
     void AddDirectory(const std::filesystem::path& directory);
-    std::vector<std::filesystem::path> m_Directories;
-    std::unordered_map<std::string, std::filesystem::file_time_type> m_Files;
+    std::vector<Directory> m_Directories;
     std::mutex m_DirectoryMutex;
     bool m_Running;
     std::thread m_WatcherThread;
