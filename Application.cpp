@@ -13,7 +13,7 @@ Application::Application() : m_LastTimePoint(std::chrono::steady_clock::now())
     m_Camera.setAspect(extent.width, extent.height);
 
     m_DirectoryWatcher.SubscribeToDirectory(
-        std::filesystem::path(WORKING_DIRECTORY));
+        std::filesystem::path(WORKING_DIRECTORY).append("shader"));
 }
 
 Application::~Application() {}
