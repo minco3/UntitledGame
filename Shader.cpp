@@ -17,8 +17,8 @@ std::vector<Shader> LoadShaders(vk::raii::Device& device)
     std::vector<Shader> shaders;
     std::filesystem::path shader_directory =
         std::filesystem::path(WORKING_DIRECTORY)
-            .append("build")
-            .append("shader");
+            .append(std::string("build"))
+            .append(std::string("shader"));
     for (std::filesystem::directory_entry entry :
          std::filesystem::directory_iterator(shader_directory))
     {
@@ -113,7 +113,7 @@ std::optional<Shader>
 CompileShader(vk::raii::Device& device, const std::string& shaderName)
 {
     std::filesystem::path shader_source_directory =
-        std::filesystem::path(WORKING_DIRECTORY).append("shader");
+        std::filesystem::path(WORKING_DIRECTORY).append(std::string("shader"));
 
     // we currently only support vertex/fragment shader combos
     // TODO: change this.
