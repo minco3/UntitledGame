@@ -17,8 +17,8 @@ include_directories(/opt/homebrew/include)
 include_directories(/usr/local/include)
 endif()
 
-# add_subdirectory(fmt)
 add_subdirectory(imgui)
+add_subdirectory(SPIRV-Reflect)
 
 file(GLOB source_files CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/*.cpp" )
 
