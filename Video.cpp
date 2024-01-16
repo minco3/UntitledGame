@@ -65,6 +65,12 @@ void Video::Render()
         std::numeric_limits<uint64_t>::max(),
         *m_SyncObjects.imageAvailableSemaphores.at(m_CurrentImage));
 
+    if (result != vk::Result::eSuccess)
+    {
+        m_CurrentImage = (m_CurrentImage + 1) % m_Swapchain.GetImageCount();
+        return;
+    }
+
     vk::raii::CommandBuffer& commandBuffer = m_CommandBuffers[m_CurrentImage];
 
     commandBuffer.reset();
@@ -111,6 +117,14 @@ void Video::Render()
     vk::Result presentResult = m_Queue.presentKHR(presentInfo);
 
     m_CurrentImage = (m_CurrentImage + 1) % m_Swapchain.GetImageCount();
+}
+
+void Video::CheckForUpdates()
+{
+    if (m_Pipeline.NeedsUpdate())
+    {
+        m_Pipeline.UpdatePipeline(m_Device);
+    }
 }
 
 void Video::Resize()

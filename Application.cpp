@@ -45,6 +45,7 @@ void Application::Run()
         Update();
         ImGui::End();
 
+        m_Video.CheckForUpdates();
         m_Video.Render();
     }
 }

@@ -25,6 +25,7 @@ public:
     ~Video();
 
     void Render();
+    void CheckForUpdates();
     void UpdateUniformBuffers(const glm::mat4& MVP);
     void Resize();
     void RecreatePipeline(const std::string& shaderName, std::filesystem::file_time_type lastModified);

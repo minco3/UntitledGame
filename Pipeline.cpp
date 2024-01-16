@@ -18,6 +18,23 @@ vk::raii::PipelineLayout& GraphicsPipeline::GetLayout()
     return m_PipelineLayout;
 }
 
+bool GraphicsPipeline::NeedsUpdate() const
+{
+    return static_cast<bool>(m_AltPipeline);
+}
+
+void GraphicsPipeline::UpdatePipeline(Device& device)
+{
+    if (!m_AltPipeline)
+    {
+        LogWarning("No alt pipeline!");
+        return;
+    }
+    device.Get().waitIdle();
+    m_Pipeline.swap(*m_AltPipeline.get());
+    m_AltPipeline.reset();
+}
+
 void GraphicsPipeline::Recreate(
     Device& device, const std::string& shaderName,
     std::filesystem::file_time_type lastModified, RenderPass& renderPass,
@@ -43,7 +60,7 @@ void GraphicsPipeline::Recreate(
     {
         m_Shaders.insert({shaderName, std::move(shader.value())});
     }
-    m_Pipeline = CreatePipeline(device, renderPass, surface);
+    m_AltPipeline = std::make_unique<vk::raii::Pipeline>(CreatePipeline(device, renderPass, surface));
 }
 
 vk::raii::Pipeline GraphicsPipeline::CreatePipeline(
