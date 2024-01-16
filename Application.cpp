@@ -13,7 +13,16 @@ Application::Application() : m_LastTimePoint(std::chrono::steady_clock::now())
     m_Camera.setAspect(extent.width, extent.height);
 
     m_DirectoryWatcher.SubscribeToDirectory(
-        std::filesystem::path(WORKING_DIRECTORY).append("shader"));
+        std::filesystem::path(WORKING_DIRECTORY).append("shader"),
+        [&](const std::filesystem::path& path, fileStatus fs)
+        {
+            if (fs == fileStatus::eModified)
+            {
+                m_Video.RecreatePipeline(
+                    path.filename().string(),
+                    std::filesystem::last_write_time(path));
+            }
+        });
 }
 
 Application::~Application() {}

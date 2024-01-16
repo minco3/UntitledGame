@@ -1,11 +1,14 @@
 #include "Pipeline.hpp"
 #include "Vertex.hpp"
+#include <algorithm>
 
 GraphicsPipeline::GraphicsPipeline(
     Device& device, RenderPass& renderPass, Surface& surface,
     Descriptors& descriptors)
-    : m_PipelineLayout(CreatePipelineLayout(device, descriptors)),
-      m_Pipeline(CreatePipeline(device, renderPass, surface))
+    : m_Shaders(LoadShaders(device.Get())),
+      m_PipelineLayout(CreatePipelineLayout(device, descriptors)),
+      m_Pipeline(CreatePipeline(device, renderPass, surface)),
+      m_LastModified(std::chrono::system_clock::now().time_since_epoch())
 {
 }
 
@@ -15,10 +18,37 @@ vk::raii::PipelineLayout& GraphicsPipeline::GetLayout()
     return m_PipelineLayout;
 }
 
+void GraphicsPipeline::Recreate(
+    Device& device, const std::string& shaderName,
+    std::filesystem::file_time_type lastModified, RenderPass& renderPass,
+    Surface& surface)
+{
+    // pipeline is newer than shader file update
+    if (m_LastModified.time_since_epoch() > lastModified.time_since_epoch())
+    {
+        return;
+    }
+    std::optional<vk::raii::ShaderModule> shader = CompileShader(device.Get(), shaderName);
+    if (!shader.has_value())
+    {
+        return;
+    }
+    m_LastModified = lastModified;
+    auto it = m_Shaders.find(shaderName);
+    if (it != m_Shaders.end())
+    {
+        std::swap(it->second, shader.value()); // TODO: make more dynamic
+    }
+    else
+    {
+        m_Shaders.insert({shaderName, std::move(shader.value())});
+    }
+    m_Pipeline = CreatePipeline(device, renderPass, surface);
+}
+
 vk::raii::Pipeline GraphicsPipeline::CreatePipeline(
     Device& device, RenderPass& renderPass, Surface& surface)
 {
-    m_Shaders = LoadShaders(device.Get());
     std::vector<vk::PipelineShaderStageCreateInfo> shaderStages =
         CreateShaderStage();
 
@@ -89,11 +119,11 @@ GraphicsPipeline::CreateShaderStage()
 {
     vk::PipelineShaderStageCreateInfo vertShaderStageCreateInfo(
         vk::PipelineShaderStageCreateFlags(), vk::ShaderStageFlagBits::eVertex,
-        *m_Shaders.front().vertShaderModule, "main");
+        *m_Shaders.at("shader.vert"), "main");
 
     vk::PipelineShaderStageCreateInfo fragShaderStageCreateInfo(
         vk::PipelineShaderStageCreateFlags(),
-        vk::ShaderStageFlagBits::eFragment, *m_Shaders.front().fragShaderModule,
+        vk::ShaderStageFlagBits::eFragment, *m_Shaders.at("shader.frag"),
         "main");
 
     std::vector<vk::PipelineShaderStageCreateInfo> shaderStages = {

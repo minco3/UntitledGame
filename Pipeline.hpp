@@ -7,6 +7,7 @@
 #include "Surface.hpp"
 
 #include <vulkan/vulkan_raii.hpp>
+#include <map>
 
 class GraphicsPipeline
 {
@@ -19,6 +20,8 @@ public:
     vk::raii::Pipeline& Get();
     vk::raii::PipelineLayout& GetLayout();
 
+    void Recreate(Device& device, const std::string& shaderName, std::filesystem::file_time_type lastModified, RenderPass& renderPass, Surface& surface);
+
 private:
     vk::raii::Pipeline
     CreatePipeline(Device& device, RenderPass& renderPass, Surface& surface);
@@ -28,7 +31,8 @@ private:
     vk::DescriptorSetLayoutCreateInfo GetDescriptorSetLayoutCreateInfo();
     void CreateDescriptorSetLayoutBindings();
 
-    std::vector<Shader> m_Shaders;
+    std::map<std::string, vk::raii::ShaderModule> m_Shaders; //sacrilidge
     vk::raii::PipelineLayout m_PipelineLayout;
     vk::raii::Pipeline m_Pipeline;
+    std::filesystem::file_time_type m_LastModified;
 };

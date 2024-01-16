@@ -130,6 +130,11 @@ void Video::RecreateRenderables()
     m_Pipeline = GraphicsPipeline(m_Device, m_RenderPass, m_Surface, m_Descriptors);
 }
 
+void Video::RecreatePipeline(const std::string& shaderName, std::filesystem::file_time_type lastModified)
+{
+    m_Pipeline.Recreate(m_Device, shaderName, lastModified, m_RenderPass, m_Surface);
+}
+
 void Video::UpdateUniformBuffers(const glm::mat4& MVP)
 {
     m_UniformBuffers.at(m_CurrentImage).GetMemory().front().MVP = MVP;
