@@ -45,7 +45,7 @@ target_link_libraries(UntitledGame SDL2::SDL2main)
 target_link_libraries(UntitledGame SDL2::SDL2)
 target_link_libraries(UntitledGame SDL2_image::SDL2_image)
 target_link_libraries(UntitledGame Vulkan::Vulkan)
-if (WIN32)
+if (WIN32) # lovely
     target_link_libraries(UntitledGame shaderc_shared)
 else()
     target_link_libraries(UntitledGame Vulkan::shaderc_combined)
