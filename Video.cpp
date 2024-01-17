@@ -4,8 +4,6 @@
 #include "Pipeline.hpp"
 #include "UniformBuffer.hpp"
 #include "Vertex.hpp"
-#include "imgui/imgui_impl_sdl2.h"
-#include "imgui/imgui_impl_vulkan.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_video.h>
 #include <SDL2/SDL_vulkan.h>
@@ -13,6 +11,8 @@
 #include <fmt/format.h>
 #include <glm/common.hpp>
 #include <glm/mat2x2.hpp>
+#include <imgui_impl_sdl2.h>
+#include <imgui_impl_vulkan.h>
 #include <span>
 #include <vulkan/vulkan_beta.h>
 
@@ -135,12 +135,15 @@ void Video::RecreateRenderables()
     m_Swapchain.Clear();
     m_Swapchain = Swapchain(m_Device, m_Surface);
     m_Framebuffers = Framebuffers(m_Swapchain, m_RenderPass, m_Device);
-    m_Pipeline = GraphicsPipeline(m_Device, m_RenderPass, m_Surface, m_Descriptors);
+    m_Pipeline =
+        GraphicsPipeline(m_Device, m_RenderPass, m_Surface, m_Descriptors);
 }
 
-void Video::RecreatePipeline(const std::string& shaderName, std::filesystem::file_time_type lastModified)
+void Video::RecreatePipeline(
+    const std::string& shaderName, std::filesystem::file_time_type lastModified)
 {
-    m_Pipeline.Recreate(m_Device, shaderName, lastModified, m_RenderPass, m_Surface);
+    m_Pipeline.Recreate(
+        m_Device, shaderName, lastModified, m_RenderPass, m_Surface);
 }
 
 void Video::UpdateUniformBuffers(const glm::mat4& MVP)

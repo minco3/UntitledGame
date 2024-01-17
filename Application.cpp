@@ -1,8 +1,8 @@
 #include "Application.hpp"
-#include "imgui/imgui_impl_sdl2.h"
-#include "imgui/imgui_impl_vulkan.h"
 #include <SDL2/SDL.h>
 #include <glm/gtx/perpendicular.hpp>
+#include <imgui_impl_sdl2.h>
+#include <imgui_impl_vulkan.h>
 
 Application::Application() : m_LastTimePoint(std::chrono::steady_clock::now())
 {
