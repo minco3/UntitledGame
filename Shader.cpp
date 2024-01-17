@@ -15,17 +15,17 @@ LoadShaders(vk::raii::Device& device)
     {
         if (entry.path().extension().string() == ".spv") // a.frag(.spv)
         {
-            std::ifstream shaderFile(entry.path());
+            std::ifstream shaderFile(entry.path(), std::ifstream::binary);
 
             const std::string shaderCode(
                 (std::istreambuf_iterator<char>(shaderFile)),
                 std::istreambuf_iterator<char>());
 
-            vk::ShaderModuleCreateInfo fragShaderCreateInfo(
+            vk::ShaderModuleCreateInfo shaderCreateInfo(
                 {}, static_cast<uint32_t>(shaderCode.size()),
                 reinterpret_cast<const uint32_t*>(shaderCode.data()));
 
-            vk::raii::ShaderModule shaderModule{device, fragShaderCreateInfo};
+            vk::raii::ShaderModule shaderModule{device, shaderCreateInfo};
 
             shaders.insert(
                 {entry.path().filename().replace_extension().string(),
