@@ -77,6 +77,9 @@ void Application::Update()
         case SDL_MOUSEBUTTONDOWN:
             if (event.button.button == SDL_BUTTON_LEFT)
             {
+                if (ImGui::IsAnyItemHovered() ||
+                    ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow))
+                    return;
                 SDL_SetRelativeMouseMode(SDL_TRUE);
             }
             break;
