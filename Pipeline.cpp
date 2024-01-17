@@ -9,7 +9,7 @@ GraphicsPipeline::GraphicsPipeline(
     : m_Shaders(LoadShaders(device.Get())),
       m_PipelineLayout(CreatePipelineLayout(device, descriptors)),
       m_Pipeline(CreatePipeline(device, renderPass, surface)),
-      m_LastModified(std::chrono::system_clock::now().time_since_epoch())
+      m_LastModified(std::chrono::file_clock::now().time_since_epoch())
 {
 }
 
