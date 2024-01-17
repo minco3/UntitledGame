@@ -3,7 +3,7 @@ find_package(SPIRV-Headers)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_library(SPIRV-Reflect spirv_reflect.cpp)
+add_library(SPIRV-Reflect spirv_reflect.cpp spirv_reflect.h)
 
 target_compile_definitions(SPIRV-Reflect PUBLIC SPIRV_REFLECT_USE_SYSTEM_SPIRV_H) # is public what I want here
 
