@@ -45,6 +45,8 @@ void Camera::move(std::chrono::nanoseconds deltaT)
         velocity += upVector;
     if (movementBits & Directions::eDown)
         velocity -= upVector;
+    if (movementBits & Directions::eSprint)
+        velocity *= 2.0f;
 
     position += velocity * seconds;
 }
@@ -54,7 +56,17 @@ void Camera::processEvent(SDL_Event& event)
     switch (event.type)
     {
     case SDL_MOUSEMOTION:
+        if (!SDL_GetRelativeMouseMode())
+            return;
         yaw += (event.motion.xrel * sensitivity);
+        if (yaw > 180.0f)
+        {
+            yaw -= 360.0f;
+        }
+        if (yaw < -180.0f)
+        {
+            yaw += 360.0f;
+        }
         pitch = std::clamp(
             pitch - (event.motion.yrel * sensitivity), -90.0f, 90.0f);
         break;
@@ -80,6 +92,10 @@ void Camera::processEvent(SDL_Event& event)
             break;
         case SDLK_c:
             mask = Directions::eDown;
+            break;
+        case SDLK_LSHIFT:
+        case SDLK_RSHIFT:
+            mask = Directions::eSprint;
             break;
         }
         if (event.type == SDL_KEYDOWN)

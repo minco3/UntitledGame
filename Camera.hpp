@@ -16,7 +16,8 @@ enum class Directions
     eRight = 0x00000004,
     eLeft = 0x00000008,
     eUp = 0x00000010,
-    eDown = 0x00000020
+    eDown = 0x00000020,
+    eSprint = 0x00000040
 };
 
 template <> struct vk::FlagTraits<Directions>
@@ -24,7 +25,8 @@ template <> struct vk::FlagTraits<Directions>
     static constexpr bool isBitmask = true;
     static constexpr vk::Flags<Directions> allFlags =
         Directions::eForward | Directions::eBack | Directions::eRight |
-        Directions::eLeft | Directions::eUp | Directions::eDown;
+        Directions::eLeft | Directions::eUp | Directions::eDown |
+        Directions::eSprint;
 };
 
 struct Camera
