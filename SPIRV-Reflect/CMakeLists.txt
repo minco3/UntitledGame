@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 14)
 
 add_library(SPIRV-Reflect spirv_reflect.cpp spirv_reflect.h)
 
-target_compile_definitions(SPIRV-Reflect PUBLIC SPIRV_REFLECT_USE_SYSTEM_SPIRV_H) # is public what I want here
+target_compile_definitions(SPIRV-Reflect PUBLIC SPIRV_REFLECT_USE_SYSTEM_SPIRV_H)
 
 target_link_libraries(SPIRV-Reflect Vulkan::Vulkan)
 target_link_libraries(SPIRV-Reflect SPIRV-Headers::SPIRV-Headers)
