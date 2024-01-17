@@ -39,6 +39,8 @@ void Application::Run()
         ImGui::Begin("Hello, world!");
         ImGui::InputFloat3("position", &m_Camera.position.x);
         ImGui::InputFloat3("lookdir", &m_Camera.lookdir.x);
+        ImGui::InputFloat("yaw", &m_Camera.yaw);
+        ImGui::InputFloat("pitch", &m_Camera.pitch);
         ImGui::Text(
             "Application average %.3f ms/frame (%.1f FPS)",
             1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);

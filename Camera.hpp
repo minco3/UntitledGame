@@ -34,7 +34,7 @@ struct Camera
     void processEvent(SDL_Event& event);
     void setAspect(uint32_t width, uint32_t height);
     glm::vec3 position = {0.0f, 2.0f, 0.0f}, lookdir, velocity;
-    float yaw, pitch;
+    float yaw{}, pitch{};
     float aspect = 1.0f;
     vk::Flags<Directions> movementBits;
 };

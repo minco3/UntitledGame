@@ -32,7 +32,7 @@ foreach(shader_file ${shader_files})
     get_filename_component(FILENAME ${shader_file} NAME)
     add_custom_command(
         TARGET shaders
-        COMMAND bash -c "${Vulkan_GLSLC_EXECUTABLE} -c -g ${shader_file} -o ${PROJECT_BINARY_DIR}/shader/${FILENAME}.spv"
+        COMMAND ${Vulkan_GLSLC_EXECUTABLE} -c -g ${shader_file} -o ${PROJECT_BINARY_DIR}/shader/${FILENAME}.spv
         DEPENDS ${shader_file}
         COMMENT "Compiling ${FILENAME}")
     list(APPEND SPV_SHADERS ${SHADER_DIR}/shaders/${FILENAME}.spv)
