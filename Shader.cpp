@@ -1,6 +1,5 @@
 #include "Shader.hpp"
 #include <algorithm>
-#include <filesystem>
 #include <shaderc/shaderc.hpp>
 
 std::map<std::string, vk::raii::ShaderModule>
@@ -16,7 +15,7 @@ LoadShaders(vk::raii::Device& device)
     {
         if (entry.path().extension().string() == ".spv") // a.frag(.spv)
         {
-            std::ifstream shaderFile(entry);
+            std::ifstream shaderFile(entry.path());
 
             const std::string shaderCode(
                 (std::istreambuf_iterator<char>(shaderFile)),

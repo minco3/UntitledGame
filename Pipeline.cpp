@@ -1,6 +1,7 @@
 #include "Pipeline.hpp"
 #include "Vertex.hpp"
 #include <algorithm>
+#include <chrono>
 
 GraphicsPipeline::GraphicsPipeline(
     Device& device, RenderPass& renderPass, Surface& surface,
@@ -45,7 +46,8 @@ void GraphicsPipeline::Recreate(
     {
         return;
     }
-    std::optional<vk::raii::ShaderModule> shader = CompileShader(device.Get(), shaderName);
+    std::optional<vk::raii::ShaderModule> shader =
+        CompileShader(device.Get(), shaderName);
     if (!shader.has_value())
     {
         return;
@@ -60,7 +62,8 @@ void GraphicsPipeline::Recreate(
     {
         m_Shaders.insert({shaderName, std::move(shader.value())});
     }
-    m_AltPipeline = std::make_unique<vk::raii::Pipeline>(CreatePipeline(device, renderPass, surface));
+    m_AltPipeline = std::make_unique<vk::raii::Pipeline>(
+        CreatePipeline(device, renderPass, surface));
 }
 
 vk::raii::Pipeline GraphicsPipeline::CreatePipeline(

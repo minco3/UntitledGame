@@ -33,6 +33,6 @@ template <> struct fmt::formatter<vk::Extent2D>
     auto format(vk::Extent2D extent, format_context& ctx) const
         -> format_context::iterator
     {
-        return format_to(ctx.out(), "{}x{}", extent.width, extent.height);
+        return fmt::format_to(ctx.out(), "{}x{}", extent.width, extent.height);
     }
 };

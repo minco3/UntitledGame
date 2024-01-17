@@ -2,6 +2,7 @@
 
 #include "Device.hpp"
 #include "Log.hpp"
+#include <filesystem>
 #include <map>
 #include <optional>
 #include <string>

@@ -53,7 +53,7 @@ void DirectoryWatcher::start()
                 const std::filesystem::path path = file.path();
                 const std::filesystem::file_time_type last_write_time =
                     file.last_write_time();
-                const auto it = files.find(path);
+                const auto it = files.find(path.string());
 
                 if (it == files.end())
                 {
