@@ -1,4 +1,5 @@
 #include "Shader.hpp"
+#include "spirv_reflect.h"
 #include <algorithm>
 #include <shaderc/shaderc.hpp>
 
@@ -109,4 +110,21 @@ std::vector<uint32_t> CompileShaderFile(const std::filesystem::path& filePath)
     }
 
     return std::vector<uint32_t>(result.cbegin(), result.cend());
+}
+
+void ReflexShader(const std::vector<uint32_t>& shaderSource)
+{
+    SpvReflectShaderModule module{};
+    SpvReflectResult result = spvReflectCreateShaderModule(
+        shaderSource.size() * sizeof(uint32_t), shaderSource.data(), &module);
+    assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+
+    uint32_t count = 0;
+    result = spvReflectEnumerateDescriptorSets(&module, &count, nullptr);
+    assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+    std::vector<SpvReflectDescriptorSet*> sets(count);
+    result = spvReflectEnumerateDescriptorSets(&module, &count, sets.data());
+    assert(result == SPV_REFLECT_RESULT_SUCCESS);
 }

@@ -14,3 +14,4 @@ LoadShaders(vk::raii::Device& device);
 std::optional<vk::raii::ShaderModule>
 CompileShader(vk::raii::Device& device, const std::string& shaderName);
 std::vector<uint32_t> CompileShaderFile(const std::filesystem::path& filePath);
+void ReflexShader(const std::vector<uint32_t>& shaderSource);
