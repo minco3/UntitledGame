@@ -114,17 +114,11 @@ std::vector<uint32_t> CompileShaderFile(const std::filesystem::path& filePath)
 
 void ReflexShader(const std::vector<uint32_t>& shaderSource)
 {
-    SpvReflectShaderModule module{};
-    SpvReflectResult result = spvReflectCreateShaderModule(
-        shaderSource.size() * sizeof(uint32_t), shaderSource.data(), &module);
-    assert(result == SPV_REFLECT_RESULT_SUCCESS);
-
+    spv_reflect::ShaderModule module(shaderSource);
 
     uint32_t count = 0;
-    result = spvReflectEnumerateDescriptorSets(&module, &count, nullptr);
-    assert(result == SPV_REFLECT_RESULT_SUCCESS);
+    module.EnumerateDescriptorSets(&count, nullptr);
 
     std::vector<SpvReflectDescriptorSet*> sets(count);
-    result = spvReflectEnumerateDescriptorSets(&module, &count, sets.data());
-    assert(result == SPV_REFLECT_RESULT_SUCCESS);
+    module.EnumerateDescriptorSets(&count, sets.data());
 }
