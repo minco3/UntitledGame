@@ -60,7 +60,7 @@ void GraphicsPipeline::Recreate(
     }
     else
     {
-        m_Shaders.insert({shaderName, std::move(shader.value())});
+        m_Shaders.emplace(shaderName, std::move(shader.value()));
     }
     m_AltPipeline = std::make_unique<vk::raii::Pipeline>(
         CreatePipeline(device, renderPass, surface));
