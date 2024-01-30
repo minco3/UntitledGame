@@ -1,11 +1,15 @@
 #include "Pipeline.hpp"
 #include "Vertex.hpp"
+#include <algorithm>
+#include <chrono>
 
 GraphicsPipeline::GraphicsPipeline(
     Device& device, RenderPass& renderPass, Surface& surface,
     Descriptors& descriptors)
-    : m_PipelineLayout(CreatePipelineLayout(device, descriptors)),
-      m_Pipeline(CreatePipeline(device, renderPass, surface))
+    : m_Shaders(LoadShaders(device.Get())),
+      m_PipelineLayout(CreatePipelineLayout(device, descriptors)),
+      m_Pipeline(CreatePipeline(device, renderPass, surface)),
+      m_LastModified(std::chrono::file_clock::now().time_since_epoch())
 {
 }
 
@@ -15,10 +19,56 @@ vk::raii::PipelineLayout& GraphicsPipeline::GetLayout()
     return m_PipelineLayout;
 }
 
+bool GraphicsPipeline::NeedsUpdate() const
+{
+    return static_cast<bool>(m_AltPipeline);
+}
+
+void GraphicsPipeline::UpdatePipeline(Device& device)
+{
+    if (!m_AltPipeline)
+    {
+        LogWarning("No alt pipeline!");
+        return;
+    }
+    device.Get().waitIdle();
+    m_Pipeline.swap(*m_AltPipeline.get());
+    m_AltPipeline.reset();
+}
+
+void GraphicsPipeline::Recreate(
+    Device& device, const std::string& shaderName,
+    std::filesystem::file_time_type lastModified, RenderPass& renderPass,
+    Surface& surface)
+{
+    // pipeline is newer than shader file update
+    if (m_LastModified.time_since_epoch() > lastModified.time_since_epoch())
+    {
+        return;
+    }
+    std::optional<vk::raii::ShaderModule> shader =
+        CompileShader(device.Get(), shaderName);
+    if (!shader.has_value())
+    {
+        return;
+    }
+    m_LastModified = lastModified;
+    auto it = m_Shaders.find(shaderName);
+    if (it != m_Shaders.end())
+    {
+        std::swap(it->second, shader.value()); // TODO: make more dynamic
+    }
+    else
+    {
+        m_Shaders.emplace(shaderName, std::move(shader.value()));
+    }
+    m_AltPipeline = std::make_unique<vk::raii::Pipeline>(
+        CreatePipeline(device, renderPass, surface));
+}
+
 vk::raii::Pipeline GraphicsPipeline::CreatePipeline(
     Device& device, RenderPass& renderPass, Surface& surface)
 {
-    m_Shaders = LoadShaders(device.Get());
     std::vector<vk::PipelineShaderStageCreateInfo> shaderStages =
         CreateShaderStage();
 
@@ -26,7 +76,7 @@ vk::raii::Pipeline GraphicsPipeline::CreatePipeline(
         0, sizeof(Vertex), vk::VertexInputRate::eVertex);
 
     std::array<vk::VertexInputAttributeDescription, 2> attributeDescription = {
-        {{0, 0, vk::Format::eR32G32Sfloat, offsetof(Vertex, pos)},
+        {{0, 0, vk::Format::eR32G32B32Sfloat, offsetof(Vertex, pos)},
          {1, 0, vk::Format::eR32G32B32Sfloat, offsetof(Vertex, color)}}};
 
     vk::PipelineVertexInputStateCreateInfo vertexInputState(
@@ -42,9 +92,9 @@ vk::raii::Pipeline GraphicsPipeline::CreatePipeline(
 
     vk::PipelineViewportStateCreateInfo viewportState({}, viewport, scissor);
 
-    vk::PipelineRasterizationStateCreateInfo rasteriztionState{};
-    rasteriztionState.setCullMode(vk::CullModeFlagBits::eBack);
-    rasteriztionState.setLineWidth(1.0f);
+    vk::PipelineRasterizationStateCreateInfo rasterizationState{};
+    rasterizationState.setCullMode(vk::CullModeFlagBits::eBack);
+    rasterizationState.setLineWidth(1.0f);
 
     vk::PipelineMultisampleStateCreateInfo multisampleState{};
 
@@ -64,7 +114,7 @@ vk::raii::Pipeline GraphicsPipeline::CreatePipeline(
 
     vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo(
         {}, shaderStages, &vertexInputState, &inputAssemblyState, {},
-        &viewportState, &rasteriztionState, &multisampleState,
+        &viewportState, &rasterizationState, &multisampleState,
         &depthStencilState, &colorBlendState, {}, *m_PipelineLayout,
         *renderPass.Get());
 
@@ -89,11 +139,11 @@ GraphicsPipeline::CreateShaderStage()
 {
     vk::PipelineShaderStageCreateInfo vertShaderStageCreateInfo(
         vk::PipelineShaderStageCreateFlags(), vk::ShaderStageFlagBits::eVertex,
-        *m_Shaders.front().vertShaderModule, "main");
+        *m_Shaders.at("shader.vert"), "main");
 
     vk::PipelineShaderStageCreateInfo fragShaderStageCreateInfo(
         vk::PipelineShaderStageCreateFlags(),
-        vk::ShaderStageFlagBits::eFragment, *m_Shaders.front().fragShaderModule,
+        vk::ShaderStageFlagBits::eFragment, *m_Shaders.at("shader.frag"),
         "main");
 
     std::vector<vk::PipelineShaderStageCreateInfo> shaderStages = {

@@ -20,14 +20,17 @@ Descriptors::Descriptors(
     device.Get().updateDescriptorSets(descriptorWriteSets, nullptr);
 }
 
-vk::raii::DescriptorPool
-Descriptors::CreateDescriptorPool(Device& device, size_t imageCount)
+vk::raii::DescriptorPool Descriptors::CreateDescriptorPool(
+    Device& device, size_t imageCount) // maxSets needs to be revisited later
 {
-    vk::DescriptorPoolSize discriptorPoolSize(
-        vk::DescriptorType::eUniformBuffer, imageCount);
+    std::array<vk::DescriptorPoolSize, 2> discriptorPoolSizes{
+        {{vk::DescriptorType::eUniformBuffer,
+          static_cast<uint32_t>(imageCount)},
+         {vk::DescriptorType::eCombinedImageSampler, /*For ImGui*/
+          static_cast<uint32_t>(imageCount)}}};
     vk::DescriptorPoolCreateInfo createInfo(
-        vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet, imageCount,
-        discriptorPoolSize);
+        vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+        discriptorPoolSizes.size() * imageCount, discriptorPoolSizes);
     return device.Get().createDescriptorPool(createInfo);
 }
 

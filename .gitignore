@@ -2,3 +2,5 @@ build/
 Xcode/
 .vscode/
 !.vscode/settings.json
+fmt/
+.DS_Store

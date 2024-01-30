@@ -13,6 +13,11 @@ CommandBuffer::CommandBuffer(
 {
 }
 
+vk::raii::CommandBuffers& CommandBuffer::Get()
+{
+    return m_CommandBuffers;
+}
+
 vk::raii::CommandBuffer& CommandBuffer::operator[](size_t index)
 {
     return m_CommandBuffers.at(index);
