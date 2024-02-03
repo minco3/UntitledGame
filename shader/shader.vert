@@ -7,6 +7,7 @@ layout(location = 0) out vec3 fragColor;
 
 layout(set = 0, binding = 0) uniform block {
     mat4 MVP;
+    vec3 color;
 };
 
 // via chatgpt
@@ -18,5 +19,5 @@ vec3 hsv2rgb(vec3 c) {
 
 void main() {
     gl_Position = MVP*vec4(inPosition, 1.0);
-    fragColor = inColor;
+    fragColor = color;
 }

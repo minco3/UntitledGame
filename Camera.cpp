@@ -5,7 +5,7 @@
 
 constexpr const float sensitivity = 0.2f;
 
-glm::mat4x4 Camera::GetMVP()
+void Camera::UpdateMVP()
 {
     float yaw_radians = glm::radians(yaw);
     float pitch_radians = glm::radians(pitch);
@@ -13,16 +13,19 @@ glm::mat4x4 Camera::GetMVP()
         -sin(yaw_radians) * cos(pitch_radians),
         -cos(yaw_radians) * cos(pitch_radians), sin(pitch_radians));
 
-    glm::mat4x4 model = glm::mat4(1.0f);
-    glm::mat4x4 view =
+    glm::mat4 model = glm::mat4(1.0f);
+    glm::mat4 view =
         glm::lookAt(position, position + lookdir, {0.0f, 0.0f, 1.0f});
-    glm::mat4x4 projection =
+    glm::mat4 projection =
         glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
-    glm::mat4x4 clip = glm::mat4x4(
-        1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f,
-        0.0f, 0.0f, 0.5f,
-        1.0f); // vulkan clip space has inverted y and half z !
-    return clip * projection * view * model;
+    // clang-format off
+    glm::mat4 clip = glm::mat4x4(
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f,-1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 0.5f, 0.0f,
+        0.0f, 0.0f, 0.5f, 1.0f); // vulkan clip space has inverted y and half z !
+    // clang-format on
+    MVP = clip * projection * view * model;
 }
 
 void Camera::move(std::chrono::nanoseconds deltaT)

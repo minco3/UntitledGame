@@ -94,5 +94,6 @@ void Application::Update()
         }
     }
     m_Camera.move(deltaT);
-    m_Video.UpdateUniformBuffers(m_Camera.GetMVP());
+    m_Camera.UpdateMVP();
+    m_Video.UpdateUniformBuffers(m_Camera.MVP);
 }

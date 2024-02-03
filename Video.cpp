@@ -148,7 +148,20 @@ void Video::RecreatePipeline(
 
 void Video::UpdateUniformBuffers(const glm::mat4& MVP)
 {
-    m_UniformBuffers.at(m_CurrentImage).GetMemory().front().MVP = MVP;
+    auto& UBO = m_UniformBuffers.at(m_CurrentImage).GetMemory().front();
+    UBO.MVP = MVP;
+    switch(m_CurrentImage)
+    {
+        case 0:
+            UBO.color = glm::vec3(1.0f, 0.0f, 0.0f);
+        break;
+        case 1:
+            UBO.color = glm::vec3(0.0f, 1.0f, 0.0f);
+        break;
+        case 2:
+            UBO.color = glm::vec3(0.0f, 0.0f, 1.0f);
+        break;
+    }
 }
 
 void Video::CaptureCursor(bool state)

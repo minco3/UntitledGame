@@ -31,11 +31,12 @@ template <> struct vk::FlagTraits<Directions>
 
 struct Camera
 {
-    glm::mat4x4 GetMVP();
+    void UpdateMVP();
     void move(std::chrono::nanoseconds deltaT);
     void processEvent(SDL_Event& event);
     void setAspect(uint32_t width, uint32_t height);
-    glm::vec3 position = {0.0f, 2.0f, 0.0f}, lookdir, velocity;
+    glm::vec3 position = {0.0f, 3.0f, 0.0f}, lookdir, velocity;
+    glm::mat4 MVP{};
     float yaw{}, pitch{};
     float aspect = 1.0f;
     vk::Flags<Directions> movementBits;
