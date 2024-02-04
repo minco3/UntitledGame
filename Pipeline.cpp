@@ -125,6 +125,7 @@ vk::raii::Pipeline GraphicsPipeline::CreatePipeline(
 vk::raii::PipelineLayout
 GraphicsPipeline::CreatePipelineLayout(Device& device, Descriptors& descriptors)
 {
+    // this assumes all pipeline layouts are the same
     vk::PipelineLayoutCreateInfo createInfo({}, *descriptors.GetLayouts().front());
     return device.Get().createPipelineLayout(createInfo);
 }
