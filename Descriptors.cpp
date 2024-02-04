@@ -8,7 +8,9 @@ Descriptors::Descriptors(
       m_DescriptorSets(CreateDescriptorSets(device))
 {
     std::vector<vk::DescriptorBufferInfo> descriptorBufferInfos;
+    descriptorBufferInfos.reserve(imageCount);
     std::vector<vk::WriteDescriptorSet> descriptorWriteSets;
+    descriptorWriteSets.reserve(imageCount);
     for (size_t i = 0; i < imageCount; i++)
     {
         // need a more dynamic solution
