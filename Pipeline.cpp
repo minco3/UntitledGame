@@ -125,12 +125,7 @@ vk::raii::Pipeline GraphicsPipeline::CreatePipeline(
 vk::raii::PipelineLayout
 GraphicsPipeline::CreatePipelineLayout(Device& device, Descriptors& descriptors)
 {
-    std::vector<vk::DescriptorSetLayout> descriptorSetLayouts;
-    for (auto& layout : descriptors.GetLayouts())
-    {
-        descriptorSetLayouts.push_back(*layout);
-    }
-    vk::PipelineLayoutCreateInfo createInfo({}, descriptorSetLayouts);
+    vk::PipelineLayoutCreateInfo createInfo({}, *descriptors.GetLayouts().front());
     return device.Get().createPipelineLayout(createInfo);
 }
 

@@ -5,5 +5,4 @@
 struct UniformBufferObject
 {
     glm::mat4 MVP;
-    glm::vec3 color;
 };

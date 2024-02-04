@@ -7,15 +7,16 @@ Descriptors::Descriptors(
       m_DescriptorSetLayouts(CreateDescriptorSetLayouts(device, imageCount)),
       m_DescriptorSets(CreateDescriptorSets(device))
 {
+    std::vector<vk::DescriptorBufferInfo> descriptorBufferInfos;
     std::vector<vk::WriteDescriptorSet> descriptorWriteSets;
     for (size_t i = 0; i < imageCount; i++)
     {
         // need a more dynamic solution
-        vk::DescriptorBufferInfo bufferInfo(
+        descriptorBufferInfos.emplace_back(
             *uniformBuffers.at(i).Get(), 0, sizeof(UniformBufferObject));
         descriptorWriteSets.emplace_back(
             *m_DescriptorSets.at(i), 0, 0, vk::DescriptorType::eUniformBuffer,
-            nullptr, bufferInfo, nullptr);
+            nullptr, descriptorBufferInfos.back(), nullptr);
     }
     device.Get().updateDescriptorSets(descriptorWriteSets, nullptr);
 }
