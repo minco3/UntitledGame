@@ -53,7 +53,7 @@ Video::~Video()
 void Video::Render()
 {
     vk::raii::Device& device = m_Device.Get();
-    device.waitForFences(
+    vk::Result fenceResult = device.waitForFences(
         *m_SyncObjects.inFlightFences.at(m_CurrentImage), VK_TRUE,
         std::numeric_limits<uint64_t>::max());
 

@@ -1,8 +1,19 @@
 #include "Shader.hpp"
 #include "spirv_reflect.h"
 #include <algorithm>
+#include <filesystem>
+#include <iostream>
 #include <shaderc/shaderc.hpp>
 #include <span>
+
+Shader::Shader(
+    vk::raii::Device& device, const std::string& _name,
+    const vk::ShaderModuleCreateInfo& vertShaderCreateInfo,
+    const vk::ShaderModuleCreateInfo& fragShaderCreateInfo)
+    : name(_name), vertShaderModule(device, vertShaderCreateInfo),
+      fragShaderModule(device, fragShaderCreateInfo)
+{
+}
 
 std::map<std::string, vk::raii::ShaderModule>
 LoadShaders(vk::raii::Device& device)
@@ -15,15 +26,26 @@ LoadShaders(vk::raii::Device& device)
     for (std::filesystem::directory_entry entry :
          std::filesystem::directory_iterator(shader_directory))
     {
-        if (entry.path().extension().string() == ".spv") // a.frag(.spv)
+        // shaderc::Compiler c;
+        if (entry.path().extension() == ".spv") // a.frag(.spv)
         {
-            std::ifstream shaderFile(entry.path(), std::ifstream::binary);
+            std::string name =
+                entry.path().stem().stem().string(); // (a).frag.spv
+            // check if shader already exists
+            if (shaders.contains(name))
+            {
+                continue;
+            }
+            
+            std::ifstream shaderFile(entry, std::ios::binary);
 
-            const std::vector<uint8_t> shaderCode(
+            std::vector<uint8_t> shaderCode(
                 (std::istreambuf_iterator<char>(shaderFile)),
                 std::istreambuf_iterator<char>());
 
-            ReflexShader(shaderCode);
+            ReflexShader(std::span<const uint32_t>(
+                reinterpret_cast<uint32_t*>(shaderCode.data()),
+                shaderCode.size()));
 
             vk::ShaderModuleCreateInfo shaderCreateInfo(
                 {}, static_cast<uint32_t>(shaderCode.size()),
@@ -52,23 +74,24 @@ CompileShader(vk::raii::Device& device, const std::string& shaderName)
     std::filesystem::path shaderPath =
         std::filesystem::path(shader_source_directory).append(shaderName);
 
-    const std::vector<uint8_t> shaderCode = CompileShaderFile(shaderPath);
+    const std::vector<uint32_t> shaderCode = CompileShaderFile(shaderPath);
 
     if (!shaderCode.size())
     {
         return {};
     }
 
-    ReflexShader(shaderCode);
+    ReflexShader(
+        std::span<const uint32_t>(shaderCode.data(), shaderCode.size()));
 
     vk::ShaderModuleCreateInfo shaderCreateInfo(
-        {}, static_cast<uint32_t>(shaderCode.size()),
-        reinterpret_cast<const uint32_t*>(shaderCode.data()));
+        {}, static_cast<uint32_t>(shaderCode.size() * sizeof(uint32_t)),
+        shaderCode.data());
 
     return std::optional<vk::raii::ShaderModule>{{device, shaderCreateInfo}};
 }
 
-std::vector<uint8_t> CompileShaderFile(const std::filesystem::path& filePath)
+std::vector<uint32_t> CompileShaderFile(const std::filesystem::path& filePath)
 {
 
     if (!std::filesystem::exists(filePath))
@@ -104,7 +127,7 @@ std::vector<uint8_t> CompileShaderFile(const std::filesystem::path& filePath)
     auto compileOptions = shaderc::CompileOptions();
     compileOptions.SetGenerateDebugInfo();
 
-    auto result = c.CompileGlslToSpvAssembly(
+    auto result = c.CompileGlslToSpv(
         shaderSource, shaderKind, filePath.filename().string().data(),
         compileOptions);
 
@@ -113,7 +136,8 @@ std::vector<uint8_t> CompileShaderFile(const std::filesystem::path& filePath)
         shaderc_compilation_status::shaderc_compilation_status_success)
     {
         LogWarning(fmt::format(
-            "Shader compilation errors: [{}]\n{}", result.GetNumErrors(), result.GetErrorMessage()));
+            "Shader compilation errors: [{}]\n{}", result.GetNumErrors(),
+            result.GetErrorMessage()));
         return {};
     }
     if (result.GetNumWarnings())
@@ -123,12 +147,12 @@ std::vector<uint8_t> CompileShaderFile(const std::filesystem::path& filePath)
             result.GetErrorMessage()));
     }
 
-    return std::vector<uint8_t>(result.cbegin(), result.cend());
+    return std::vector<uint32_t>(result.cbegin(), result.cend());
 }
 
-void ReflexShader(const std::vector<uint8_t>& shaderSource)
+void ReflexShader(const std::span<const uint32_t>& shaderSource)
 {
-    spv_reflect::ShaderModule module(shaderSource);
+    spv_reflect::ShaderModule module(shaderSource.size(), shaderSource.data());
 
     uint32_t descriptorSetCount = 0;
     module.EnumerateDescriptorSets(&descriptorSetCount, nullptr);
@@ -150,7 +174,8 @@ void ReflexShader(const std::vector<uint8_t>& shaderSource)
     uint32_t inputVariableCount = 0;
     module.EnumerateInputVariables(&inputVariableCount, nullptr);
 
-    std::vector<SpvReflectInterfaceVariable*> inputVariables(inputVariableCount);
+    std::vector<SpvReflectInterfaceVariable*> inputVariables(
+        inputVariableCount);
     module.EnumerateInputVariables(&inputVariableCount, inputVariables.data());
 
     for (const auto ptr : inputVariables)

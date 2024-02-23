@@ -1,6 +1,8 @@
 #pragma once
 
+#include "vulkanfmt.hpp"
 #include <fmt/ostream.h>
+#include <iostream>
 
 void LogError(const std::string& message);
 
