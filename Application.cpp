@@ -1,6 +1,5 @@
 #include "Application.hpp"
 #include <SDL2/SDL.h>
-#include <glm/gtx/perpendicular.hpp>
 #include <imgui_impl_sdl2.h>
 #include <imgui_impl_vulkan.h>
 

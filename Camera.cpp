@@ -1,5 +1,5 @@
 #include "Camera.hpp"
-#include "glm/gtc/matrix_transform.hpp"
+#include <glm/gtc/matrix_transform.hpp>
 #include <SDL2/SDL_keycode.h>
 #include <algorithm>
 
