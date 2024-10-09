@@ -45,7 +45,7 @@ LoadShaders(vk::raii::Device& device)
 
             ReflexShader(std::span<const uint32_t>(
                 reinterpret_cast<uint32_t*>(shaderCode.data()),
-                shaderCode.size()));
+                shaderCode.size() / sizeof(uint32_t)));
 
             vk::ShaderModuleCreateInfo shaderCreateInfo(
                 {}, static_cast<uint32_t>(shaderCode.size()),
@@ -152,7 +152,7 @@ std::vector<uint32_t> CompileShaderFile(const std::filesystem::path& filePath)
 
 void ReflexShader(const std::span<const uint32_t>& shaderSource)
 {
-    spv_reflect::ShaderModule module(shaderSource.size(), shaderSource.data());
+    spv_reflect::ShaderModule module(shaderSource.size() * sizeof(uint32_t), shaderSource.data());
 
     uint32_t descriptorSetCount = 0;
     module.EnumerateDescriptorSets(&descriptorSetCount, nullptr);
