@@ -4,7 +4,7 @@ Swapchain::Swapchain(Device& device, Surface& surface)
     : m_Swapchain(CreateSwapchain(device, surface)),
       m_SwapchainImageViews(
           CreateSwapchainImageViews(device.Get(), surface.surfaceFormat)),
-    m_Extent(surface.surfaceCapabilities.currentExtent)
+      m_Extent(surface.surfaceCapabilities.currentExtent)
 {
 }
 
