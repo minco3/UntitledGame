@@ -20,7 +20,7 @@ endif()
 add_subdirectory(imgui)
 add_subdirectory(SPIRV-Reflect)
 
-file(GLOB source_files CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/*.cpp" )
+file(GLOB source_files CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/src/*.cpp" )
 
 add_custom_target(shaders ALL DEPENDS ${SPV_SHADERS})
 
@@ -39,7 +39,7 @@ foreach(shader_file ${shader_files})
 endforeach()
 
 SET(RUNTIME_SHADERS TRUE)
-add_executable(UntitledGame main.cpp ${source_files})
+add_executable(UntitledGame src/main.cpp ${source_files})
 add_dependencies(UntitledGame shaders)
 target_link_libraries(UntitledGame SDL2::SDL2main)
 target_link_libraries(UntitledGame SDL2::SDL2)
