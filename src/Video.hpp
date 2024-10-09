@@ -28,7 +28,7 @@ public:
     void CheckForUpdates();
     void UpdateUniformBuffers(const glm::mat4& MVP);
     void Resize();
-    void RecreatePipeline(const std::string& shaderName, std::filesystem::file_time_type lastModified);
+    void HotLoadShader(const std::string& shaderName, std::filesystem::file_time_type lastModified);
     void InitImGui();
     void CaptureCursor(bool state);
     vk::Extent2D GetScreenSize() const;

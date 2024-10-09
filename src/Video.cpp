@@ -136,14 +136,14 @@ void Video::RecreateRenderables()
     m_Swapchain.Clear();
     m_Swapchain = Swapchain(m_Device, m_Surface);
     m_Framebuffers = Framebuffers(m_Swapchain, m_RenderPass, m_Device);
-    m_Pipeline =
-        GraphicsPipeline(m_Device, m_RenderPass, m_Surface, m_Descriptors);
+    m_Pipeline.Recreate(m_Device, m_RenderPass, m_Surface);
+    m_CurrentImage = 0;
 }
 
-void Video::RecreatePipeline(
+void Video::HotLoadShader(
     const std::string& shaderName, std::filesystem::file_time_type lastModified)
 {
-    m_Pipeline.Recreate(
+    m_Pipeline.HotLoadShader(
         m_Device, shaderName, lastModified, m_RenderPass, m_Surface);
 }
 

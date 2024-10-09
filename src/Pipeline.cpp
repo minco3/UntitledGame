@@ -36,7 +36,7 @@ void GraphicsPipeline::UpdatePipeline(Device& device)
     m_AltPipeline.reset();
 }
 
-void GraphicsPipeline::Recreate(
+void GraphicsPipeline::HotLoadShader(
     Device& device, const std::string& shaderName,
     std::filesystem::file_time_type lastModified, RenderPass& renderPass,
     Surface& surface)
@@ -53,8 +53,7 @@ void GraphicsPipeline::Recreate(
         return;
     }
     m_LastModified = lastModified;
-    auto it = m_Shaders.find(shaderName);
-    if (it != m_Shaders.end())
+    if (auto it = m_Shaders.find(shaderName); it != m_Shaders.end())
     {
         std::swap(it->second, shader.value()); // TODO: make more dynamic
     }
@@ -62,6 +61,12 @@ void GraphicsPipeline::Recreate(
     {
         m_Shaders.emplace(shaderName, std::move(shader.value()));
     }
+    Recreate(device, renderPass, surface);
+}
+
+void GraphicsPipeline::Recreate(
+    Device& device, RenderPass& renderPass, Surface& surface)
+{
     m_AltPipeline = std::make_unique<vk::raii::Pipeline>(
         CreatePipeline(device, renderPass, surface));
 }

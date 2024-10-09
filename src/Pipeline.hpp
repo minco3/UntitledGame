@@ -23,10 +23,12 @@ public:
     vk::raii::PipelineLayout& GetLayout();
     bool NeedsUpdate() const;
 
-    void Recreate(
+    void HotLoadShader(
         Device& device, const std::string& shaderName,
         std::filesystem::file_time_type lastModified, RenderPass& renderPass,
         Surface& surface);
+    void Recreate(
+        Device& device, RenderPass& renderPass, Surface& surface);
 
     void UpdatePipeline(Device& device);
 

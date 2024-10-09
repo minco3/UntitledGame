@@ -17,7 +17,7 @@ Application::Application() : m_LastTimePoint(std::chrono::steady_clock::now())
         {
             if (fs == fileStatus::eModified)
             {
-                m_Video.RecreatePipeline(
+                m_Video.HotLoadShader(
                     path.filename().string(),
                     std::filesystem::last_write_time(path));
             }
