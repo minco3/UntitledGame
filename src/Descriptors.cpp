@@ -1,0 +1,72 @@
+#include "Descriptors.hpp"
+
+Descriptors::Descriptors(
+    Device& device, std::vector<Buffer<UniformBufferObject>>& uniformBuffers,
+    size_t imageCount)
+    : m_DescriptorPool(CreateDescriptorPool(device, imageCount)),
+      m_DescriptorSetLayouts(CreateDescriptorSetLayouts(device, imageCount)),
+      m_DescriptorSets(CreateDescriptorSets(device))
+{
+    std::vector<vk::DescriptorBufferInfo> descriptorBufferInfos;
+    descriptorBufferInfos.reserve(imageCount);
+    std::vector<vk::WriteDescriptorSet> descriptorWriteSets;
+    descriptorWriteSets.reserve(imageCount);
+    for (size_t i = 0; i < imageCount; i++)
+    {
+        // need a more dynamic solution
+        descriptorBufferInfos.emplace_back(
+            *uniformBuffers.at(i).Get(), 0, sizeof(UniformBufferObject));
+        descriptorWriteSets.emplace_back(
+            *m_DescriptorSets.at(i), 0, 0, vk::DescriptorType::eUniformBuffer,
+            nullptr, descriptorBufferInfos.back(), nullptr);
+    }
+    device.Get().updateDescriptorSets(descriptorWriteSets, nullptr);
+}
+
+vk::raii::DescriptorPool Descriptors::CreateDescriptorPool(
+    Device& device, size_t imageCount) // maxSets needs to be revisited later
+{
+    std::array<vk::DescriptorPoolSize, 2> discriptorPoolSizes{
+        {{vk::DescriptorType::eUniformBuffer,
+          static_cast<uint32_t>(imageCount)},
+         {vk::DescriptorType::eCombinedImageSampler, /*For ImGui*/
+          static_cast<uint32_t>(imageCount)}}};
+    vk::DescriptorPoolCreateInfo createInfo(
+        vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+        discriptorPoolSizes.size() * imageCount, discriptorPoolSizes);
+    return device.Get().createDescriptorPool(createInfo);
+}
+
+std::vector<vk::raii::DescriptorSetLayout>
+Descriptors::CreateDescriptorSetLayouts(Device& device, size_t imageCount)
+{
+    vk::DescriptorSetLayoutBinding descriptorSetLayoutBinding(
+        0, vk::DescriptorType::eUniformBuffer, 1,
+        vk::ShaderStageFlagBits::eVertex);
+
+    m_DescriptorSetLayoutBindings.push_back(descriptorSetLayoutBinding);
+
+    vk::DescriptorSetLayoutCreateInfo createInfo(
+        {}, m_DescriptorSetLayoutBindings);
+
+    std::vector<vk::raii::DescriptorSetLayout> descriptorSetLayouts;
+
+    for (size_t i = 0; i < imageCount; i++)
+    {
+        descriptorSetLayouts.emplace_back(
+            device.Get().createDescriptorSetLayout(createInfo));
+    }
+    return descriptorSetLayouts;
+}
+
+vk::raii::DescriptorSets Descriptors::CreateDescriptorSets(Device& device)
+{
+    std::vector<vk::DescriptorSetLayout> setLayouts;
+    for (auto& layout : m_DescriptorSetLayouts)
+    {
+        setLayouts.push_back(*layout);
+    }
+
+    vk::DescriptorSetAllocateInfo allocInfo(*m_DescriptorPool, setLayouts);
+    return vk::raii::DescriptorSets(device.Get(), allocInfo);
+}

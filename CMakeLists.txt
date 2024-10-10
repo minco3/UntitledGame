@@ -8,19 +8,19 @@ set(CMAKE_CXX_STANDARD 20)
 
 find_package(SDL2 REQUIRED)
 find_package(SDL2_image REQUIRED)
-find_package(Vulkan REQUIRED COMPONENTS glslc)
+find_package(Vulkan REQUIRED COMPONENTS glslc shaderc_combined)
 find_package(glm REQUIRED)
 find_package(fmt REQUIRED)
-# find_package(shaderc REQUIRED)
 
 if(APPLE)
-include_directories(/opt/homebrew/include)
-include_directories(/usr/local/include)
+    include_directories(/opt/homebrew/include)
+    include_directories(/usr/local/include)
 endif()
 
-# add_subdirectory(fmt)
+add_subdirectory(imgui)
+add_subdirectory(SPIRV-Reflect)
 
-file(GLOB source_files CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/*.cpp" )
+file(GLOB source_files CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/src/*.cpp" )
 
 add_custom_target(shaders ALL DEPENDS ${SPV_SHADERS})
 
@@ -32,22 +32,29 @@ foreach(shader_file ${shader_files})
     get_filename_component(FILENAME ${shader_file} NAME)
     add_custom_command(
         TARGET shaders
-        COMMAND bash -c "${Vulkan_GLSLC_EXECUTABLE} -c -g ${shader_file} -o ${PROJECT_BINARY_DIR}/shader/${FILENAME}.spv"
+        COMMAND ${Vulkan_GLSLC_EXECUTABLE} -c -g ${shader_file} -o ${PROJECT_BINARY_DIR}/shader/${FILENAME}.spv
         DEPENDS ${shader_file}
         COMMENT "Compiling ${FILENAME}")
     list(APPEND SPV_SHADERS ${SHADER_DIR}/shaders/${FILENAME}.spv)
 endforeach()
 
-add_executable(UntitledGame main.cpp ${source_files})
+SET(RUNTIME_SHADERS TRUE)
+add_executable(UntitledGame src/main.cpp ${source_files})
 add_dependencies(UntitledGame shaders)
 target_link_libraries(UntitledGame SDL2::SDL2main)
 target_link_libraries(UntitledGame SDL2::SDL2)
 target_link_libraries(UntitledGame SDL2_image::SDL2_image)
 target_link_libraries(UntitledGame Vulkan::Vulkan)
-# message(STATUS ${Vulkan_LIBRARY})
-if (WIN32)
-target_link_libraries(UntitledGame glm)
+if (WIN32) # lovely
+    target_link_libraries(UntitledGame shaderc_shared)
 else()
-target_link_libraries(UntitledGame glm::glm)
+    target_link_libraries(UntitledGame Vulkan::shaderc_combined)
+endif()
+target_link_libraries(UntitledGame imgui)
+target_link_libraries(UntitledGame SPIRV-Reflect)
+if (WIN32)
+    target_link_libraries(UntitledGame glm)
+else()
+    target_link_libraries(UntitledGame glm::glm)
 endif (WIN32)
 target_link_libraries(UntitledGame fmt::fmt)
